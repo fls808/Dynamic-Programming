@@ -85,7 +85,7 @@ class EducationModel(EconModelClass):
         sim = self.sim 
 
         # a. father education
-        
+
 
     
     def bellman(self,ev0,output=1):
@@ -119,7 +119,7 @@ class EducationModel(EconModelClass):
                                     for i_sou in enumerate(par.south_grid):
                                         for i_s in enumerate(par.school_time_grid):
                                             for i_e in enumerate(par.experience_grid):
-                                               for i_eps_xi in enumerate()
+                                               for i_eps_xi in enumerate():
 
 
 
