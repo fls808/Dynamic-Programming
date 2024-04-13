@@ -74,6 +74,36 @@ class EducationModel(EconModelClass):
         # (lige nu arbejder vi bare med 1 andengradssammenhæng)
         par.phi1 = 0.05
 
+
+        # grids
+        par.dad_educ_min = 0
+        par.dad_educ_max = 20
+        par.Nd = 20 # number of dad education grid points
+
+        par.mom_educ_min = 0
+        par.mom_educ_max = 20
+        par.Nm = 20 # number of mom education grid points
+
+        par.num_sib_min = 0
+        par.num_sib_max = 15
+        par.Ns = 15 # number of siblings grid points
+
+        par.income_min = 0
+        par.income_max = 155000
+        par.Ni = 155 # number of income grid points
+
+        par.school_time_min = 6
+        par.school_time_max = 20
+        par.Ns = 15 # number of school time grid points
+
+        par.experience_min = 0
+        par.experience_max = 17
+        par.Ne = 34 # number of experience grid points
+
+        par.wage_min = 2
+        par.wage_max = 40 
+        par.Nw = 38 # number of wage grid points
+
         par.tol_simulate = 1e-12 # tolerance when simulating household problem
     
     def allocate(self):
@@ -85,6 +115,27 @@ class EducationModel(EconModelClass):
         sim = self.sim 
 
         # a. father education
+        par.father_grid = np.linspace(par.dad_educ_min,par.dad_educ_max,par.Nd)
+        
+        # b. mother education
+        par.mother_grid = np.linspace(par.mom_educ_min,par.mom_educ_max,par.Nm)
+
+        # c. income grid 
+        par.income_grid = nonlinspace(par.income_min,par.income_max,par.Ni,1.1)
+
+        # d. siblings grid
+        par.siblings_grid = np.linspace(par.num_sib_min,par.num_sib_max,par.Ns)
+
+        # e. nuclear family
+        par.nuclear_grid = np.array([0,1])
+
+        # f. rural
+        par.rural_grid = np.array([0,1])
+
+        # g. south
+        par.south_grid = np.array([0,1])
+
+
 
 
     
