@@ -5,7 +5,7 @@ from EconModel import EconModelClass, jit
 
 from consav.grids import nonlinspace
 from consav.linear_interp import interp_1d
-from consav.quadrature import log_normal_gauss_hermite
+from consav.quadrature import normal_gauss_hermite
 
 class EducationModel(EconModelClass):
     def settings(self):
@@ -32,8 +32,6 @@ class EducationModel(EconModelClass):
         par.delta4 = 0 # Nuclear family 
         par.delta5 = 0 # Rural 
         par.delta6 = 0 # South
-
-        par.simgaxi = 0 # std. of shock to utility of going to school
 
         # wages ability's correlation with background
         par.gamma0_w = 0 # Father's education 
@@ -62,13 +60,10 @@ class EducationModel(EconModelClass):
         par.kappa2 = -0.0146 # employment return to work experience 
         par.kappa3 = 0.0001 # employment return to work experience squared
 
-        par.sigmae = 0 # std. of shock of being employed
-
         # wage 
         par.phi2 = 0.0877 # wage return to experience
         par.phi3 = -0.0030 # wage return to experience squared
 
-        par.sigmaw = 0 # std. of shock to wage
 
         # wage return to schooling (splines)
         # (lige nu arbejder vi bare med 1 andengradssammenhæng)
@@ -104,6 +99,19 @@ class EducationModel(EconModelClass):
         par.wage_max = 40 
         par.Nw = 38 # number of wage grid points
 
+        # shocks 
+        par.Nepsxi = 5
+        par.sigmaxi = 0 # std. of shock to utility of going to school 
+        par.Nepsw = 5
+        par.sigmaw = 0 # std. of shock to wage
+        par.Nepse = 5 
+        par.sigmae = 0 # std. of shock of being employed
+
+        # ability
+        par.Nnuxi = 5
+        par.Nnue = 5
+        par.Nnuw = 5
+
         par.tol_simulate = 1e-12 # tolerance when simulating household problem
     
     def allocate(self):
@@ -113,6 +121,8 @@ class EducationModel(EconModelClass):
         par = self.par
         sol = self.sol 
         sim = self.sim 
+
+        # Types 
 
         # a. father education
         par.father_grid = np.linspace(par.dad_educ_min,par.dad_educ_max,par.Nd)
@@ -135,19 +145,20 @@ class EducationModel(EconModelClass):
         # g. south
         par.south_grid = np.array([0,1])
 
+        #_____________
+        # h. school time grid
+        par.school_time_grid = np.linspace(par.school_time_min,par.school_time_max,par.Ns)
 
+        # i. experience grid
+        par.experience_grid = nonlinspace(par.experience_min,par.experience_max,par.Ne,1.1)
 
+        # j. wage grid
+        par.wage_grid = nonlinspace(par.wage_min,par.wage_max,par.Nw,1.1)
 
-    
-    def bellman(self,ev0,output=1):
-        
-        # unpack 
-        par = self.par
-
-        # Value of options 
-        
-        # pstop = 
-        pinterup = par.zeta
+        # k. shocks grid
+        par.epsxi_grid, par.epsxi_weight = normal_gauss_hermite(par.sigma_xi,par.Nepsxi)
+        par.epsw_grid, par.epsw_weight = normal_gauss_hermite(par.sigma_w,par.Nepsw)
+        par.epse_grid, par.epse_weight = normal_gauss_hermite(par.sigma_e,par.Nepse)
     
     def solve(self):
 
@@ -161,43 +172,81 @@ class EducationModel(EconModelClass):
         for t in reversed(range(par.T)):
 
             # loop over state variables: family background, school time, experience, and shocks
-            for i_f in enumerate(par.father_grid):
-                for i_m in enumerate(par.mother_grid):
-                    for i_inc in enumerate(par.income_grid):
-                        for i_sib in enumerate(par.siblings_grid):
-                            for i_nuc in enumerate(par.nuclear_grid):
-                                for i_rur in enumerate(par.rural_grid):
-                                    for i_sou in enumerate(par.south_grid):
-                                        for i_s in enumerate(par.school_time_grid):
-                                            for i_e in enumerate(par.experience_grid):
-                                               for i_eps_xi in enumerate():
+            for i_f, father in enumerate(par.father_grid):
+                for i_m, mother in enumerate(par.mother_grid):
+                    for i_i, income in enumerate(par.income_grid):
+                        for i_s, siblings in enumerate(par.siblings_grid):
+                            for i_n, nuclear in enumerate(par.nuclear_grid):
+                                for i_r, rural in enumerate(par.rural_grid):
+                                    for i_s, south in enumerate(par.south_grid):
+                                        for i_st, school_time in enumerate(par.school_time_grid):
+                                            for i_e, experience in enumerate(par.experience_grid):
+                                                for i_epsxi, epsxi in enumerate(par.epsxi_grid):
+                                                    for i_epsw, epsw in enumerate(par.epsw_grid):
+                                                        for i_epse, epse in enumerate(par.epse_grid):
+                                                            pass
 
+    def bellman_school(self,t, father, mother, income, siblings, nuclear, rural, south, school_time, epsxi, nuxi):
+        """ bellman equation for school """
+        par = self.par
+        sol = self.sol
 
+        # flow utility
+        util = self.utility_school(father, mother, income, siblings, nuclear, rural, south, school_time, nuxi, epsxi)
 
-      
+        # expected value
+        V_next = sol.V[t+1,father,mother,income,siblings,nuclear,rural,south,school_time]
+        EV_next = 0 
+
+        for i_epsxi, epsxi_next in enumerate(par.epsxi_grid):
+            for i_epsw, epsw_next in enumerate(par.epsw_grid):
+                for i_epse, epse_next in enumerate(par.epse_grid):
+                    V_next = 
+                    EV_next += 
+        
+        
+                                                            
     
-    def utility_school(self, father, mother, income, siblings, nuclear, rural, south, school_time):
+    def ability_school(self,nuxi):
+        """ ability of attending school """
+        return nuxi
+    
+    def ability_wage(self,nuw,father, mother, income, siblings, nuclear, rural, south):
+        """ ability wage """
+        par = self.par
+        return nuw + par.gamma0_w*father + par.gamma1_w*mother + par.gamma2_w*income + par.gamma3_w*siblings + par.gamma4_w*nuclear + par.gamma5_w*rural + par.gamma6_w*south
+    
+    def ability_employment(self,nue,father, mother, income, siblings, nuclear, rural, south):
+        """ ability employment """
+        par = self.par
+        return nue + par.gamma0_e*father + par.gamma1_e*mother + par.gamma2_e*income + par.gamma3_e*siblings + par.gamma4_e*nuclear + par.gamma5_e*rural + par.gamma6_e*south
+    
+    
+    def utility_school(self, father, mother, income, siblings, nuclear, rural, south, school_time, nuxi, epsxi):
         """ utility of attending school """
         # unpack
         par = self.par
         familiy_util = par.delta0*father + par.delta1*mother + par.delta2*income + par.delta3*siblings + par.delta4*nuclear + par.delta5*rural + par.delta6*south
         school_time_util = par.delta7*school_time
-        utility_school = familiy_util + school_time_util
+        ability_school = self.ability_school(nuxi)
 
+        utility_school = familiy_util + school_time_util + ability_school + epsxi
         return utility_school
     
-    def utility_work(self, e,school_time, experience):
+    def utility_work(self, school_time, experience,epsw, father, mother, income, siblings, nuclear, rural, south):
         """ utility of working """
         par = self.par
-        wage = np.exp(self.logwage(school_time, experience))
+        wage = np.exp(self.logwage(school_time, experience, epsw, father, mother, income, siblings, nuclear, rural, south))
         e = 1/np.exp(np.exp(self.logestar(school_time, experience)))
         return np.log(e*wage)
         
-    def logwage(self, school_time, experience):
+    def logwage(self, school_time, experience, epsw, father, mother, income, siblings, nuclear, rural, south):
         """ log wage """
         par = self.par
-        return par.phi1*school_time + par.phi2*experience + par.phi3*experience**2
+        ability_wage = self.ability_wage(father, mother, income, siblings, nuclear, rural, south)
+        return par.phi1*school_time + par.phi2*experience + par.phi3*experience**2 + ability_wage + epsw
     
-    def logestar(self, school_time, experience):
+    def logestar(self, school_time, experience, epse, nue, father, mother, income, siblings, nuclear, rural, south):
         par = self.par
-        return par.kappa1*school_time + par.kappa2*experience + par.kappa3*experience**2
+        ability_employment = self.ability_employment(nue,father, mother, income, siblings, nuclear, rural, south)
+        return par.kappa1*school_time + par.kappa2*experience + par.kappa3*experience**2 + ability_employment + epse
