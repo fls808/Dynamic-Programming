@@ -22,11 +22,11 @@ class EducationModel(EconModelClass):
 
         #par.T = 65 # perioder
         par.T = 3
-        par.simN = 500 # number of households
         par.simT = par.T 
         # par.zeta = 0 # prob. of being interrupted
         par.beta = 0.5 # discount rate 
         par.Nfix = 6 # number of types
+        par.simN = par.Nfix*50 # number of households. Should be something dividable with number of types
 
         # utility of attending school correlation with background (in it is also ability in education)
         #par.delta0 = 0 # Father's education
@@ -57,7 +57,7 @@ class EducationModel(EconModelClass):
 
         # utility of attending school correlation with school time (splines)
         # (lige nu arbejder vi bare med 1 lineær sammenhæng)
-        par.delta7 = -0.1
+        par.delta7 = -0.0001
 
         # employment return to schooling 
         par.kappa1 = -0.0258 # employment return to schooling 
@@ -70,8 +70,8 @@ class EducationModel(EconModelClass):
 
 
         # wage return to schooling (splines)
-        # (lige nu arbejder vi bare med 1 lineær sammenhæng)
-        par.phi1 = 0.05
+        # (lige nu arbejder vi bare med en lineær sammenhæng)
+        par.phi1 = 1 # wage return to schooling
 
 
         # grids
@@ -101,15 +101,15 @@ class EducationModel(EconModelClass):
 
         par.wage_min = 2
         par.wage_max = 40 
-        par.Nw = 5 # number of wage grid points
+        par.Nw = 10 # number of wage grid points
 
         # shocks 
         par.Nepsxi = 5
-        par.sigma_xi = 0.1 # std. of shock to utility of going to school 
+        par.sigma_xi = 0.01 # std. of shock to utility of going to school 
         par.Nepsw = 5
-        par.sigma_w = 0.1 # std. of shock to wage
+        par.sigma_w = 0.01 # std. of shock to wage
         par.Nepse = 5 
-        par.sigma_e = 0.1 # std. of shock of being employed
+        par.sigma_e = 0.01 # std. of shock of being employed
 
         # ability
         par.nuxi_1 = -2.9693 
@@ -141,7 +141,6 @@ class EducationModel(EconModelClass):
         par.util_sch_fix_5 = 1
         par.util_sch_fix_6 = 1.2
 
-        par.tol_simulate = 1e-12 # tolerance when simulating household problem
     
     def allocate(self):
         """ allocate model """
@@ -178,7 +177,7 @@ class EducationModel(EconModelClass):
     #    par.south_grid = np.array([0,1])
 
         # i. experience grid
-        par.experience_grid = nonlinspace(par.experience_min,par.experience_max,par.Ne,1.1)
+        par.experience_grid = np.linspace(par.experience_min,par.experience_max,par.Ne)
 
         # j. wage grid
         # par.wage_grid = nonlinspace(par.wage_min,par.wage_max,par.Nw,1.1)
@@ -213,7 +212,7 @@ class EducationModel(EconModelClass):
         sim.type = np.zeros(shape) + np.nan
         sim.wage = np.nan + np.zeros(shape)
 
-        # f. draws used to simulate child arrival
+        # f. draws used to simulate shocks 
         np.random.seed(9210)
         sim.draws_epsxi = np.random.normal(scale=par.sigma_xi,size=shape)
         sim.draws_epsw = np.random.normal(scale=par.sigma_w,size=shape)
@@ -251,30 +250,46 @@ class EducationModel(EconModelClass):
             
                                         # solve last period 
                                         if t == par.T-1:
-                                            utility_school = self.utility_school(school_time, util_school_fix, nuxi, epsxi)
-                                            utility_work, wage = self.utility_work(school_time, experience, nue, epse, nuw,epsw)
+                                            utility_work  = self.utility_work(school_time, experience, nue, epse, nuw,epsw)
+
+                                            if sol.d[t-1,i_fix,i_st,i_e,i_epsxi,i_epsw,i_epse]==1:
+
+                                                utility_school = self.utility_school(school_time, util_school_fix, nuxi, epsxi)
+                                                sol.V[t,i_fix,i_st,i_e,i_epsxi,i_epsw,i_epse] = np.maximum(utility_school,utility_work)
+                                                sol.d[t,i_fix,i_st,i_e,i_epsxi,i_epsw,i_epse] = utility_school > utility_work
                                             
-                                            sol.V[t,i_fix,i_st,i_e,i_epsxi,i_epsw,i_epse] = np.maximum(utility_school,utility_work)
-                                            sol.d[t,i_fix,i_st,i_e,i_epsxi,i_epsw,i_epse] = utility_school > utility_work
+                                            else: 
+                                                sol.V[t,i_fix,i_st,i_e,i_epsxi,i_epsw,i_epse] = utility_work
+                                                sol.d[t,i_fix,i_st,i_e,i_epsxi,i_epsw,i_epse] = 0
+                                                
+                                            if sol.d[t,i_fix,i_st,i_e,i_epsxi,i_epsw,i_epse]== 0 :
+                                                sol.wage[t,i_fix,i_st,i_e,i_epsxi,i_epsw,i_epse] = self.wage(school_time,experience,nuw,epsw)
+
                                             sol.school_time[t,i_fix,i_st,i_e,i_epsxi,i_epsw,i_epse] = school_time
                                             sol.experience[t,i_fix,i_st,i_e,i_epsxi,i_epsw,i_epse] = experience
-                                            if utility_work > utility_school:
-                                                sol.wage[t,i_fix,i_st,i_e,i_epsxi,i_epsw,i_epse] = wage
+                                            
                                     
                                         else:
-                                            # a. bellman school
-                                            bellman_school = self.bellman_school(t,school_time, i_fix, epsxi, nuxi)
-                                            
-                                            # b. bellman work
-                                            bellman_work, wage  = self.bellman_work(t, school_time, experience, i_fix, nue, epse, nuw,epsw)
 
-                                            # c. update solution
-                                            sol.V[t,i_fix,i_st,i_e,i_epsxi,i_epsw,i_epse] = np.maximum(bellman_school,bellman_work)
-                                            sol.d[t,i_fix,i_st,i_e,i_epsxi,i_epsw,i_epse] = bellman_school > bellman_work
+                                            # b. bellman work
+                                            bellman_work  = self.bellman_work(t, school_time, experience, i_fix, nue, epse, nuw,epsw)
+
+                                            if sol.d[t-1,i_fix,i_st,i_e,i_epsxi,i_epsw,i_epse]==1:
+                                                # a. bellman school
+                                                bellman_school = self.bellman_school(t,school_time, i_fix, epsxi, nuxi)
+                                            
+                                                sol.V[t,i_fix,i_st,i_e,i_epsxi,i_epsw,i_epse] = np.maximum(bellman_school,bellman_work)
+                                                sol.d[t,i_fix,i_st,i_e,i_epsxi,i_epsw,i_epse] = bellman_school > bellman_work
+                                                if bellman_work > bellman_school:
+                                                    sol.wage[t,i_fix,i_st,i_e,i_epsxi,i_epsw,i_epse] = wage
+                                            
+                                            else:
+                                                sol.V[t,i_fix,i_st,i_e,i_epsxi,i_epsw,i_epse] = bellman_work
+                                                sol.d[t,i_fix,i_st,i_e,i_epsxi,i_epsw,i_epse] = 1
+
                                             sol.school_time[t,i_fix,i_st,i_e,i_epsxi,i_epsw,i_epse] = school_time
                                             sol.experience[t,i_fix,i_st,i_e,i_epsxi,i_epsw,i_epse] = experience
-                                            if bellman_work > bellman_school:
-                                                sol.wage[t,i_fix,i_st,i_e,i_epsxi,i_epsw,i_epse] = wage
+                                            
 
                         
 
@@ -309,7 +324,7 @@ class EducationModel(EconModelClass):
         sol = self.sol
 
         # flow utility
-        utility_work, wage = self.utility_work(school_time, experience, nue, epse, nuw,epsw)
+        utility_work = self.utility_work(school_time, experience, nue, epse, nuw,epsw)
 
         experience_next = experience + 1 
         school_next = school_time
@@ -323,7 +338,7 @@ class EducationModel(EconModelClass):
                     V_next_interp = interp_2d(par.school_time_grid,par.experience_grid,V_next,school_next,experience_next)
                     EV_next_work += par.epsw_weight[i_epsw]*par.epse_weight[i_epse] * V_next_interp
         bellman_work = utility_work + par.beta* EV_next_work
-        return bellman_work, wage
+        return bellman_work
 
 
     
@@ -338,10 +353,13 @@ class EducationModel(EconModelClass):
     def utility_work(self, school_time, experience, nue, epse, nuw,epsw):
         """ utility of working """
         par = self.par
-        wage = np.exp(self.logwage(school_time, experience, nuw, epsw))
+        wage = self.wage(school_time, experience, nuw,epsw)
         e = 1/np.exp(np.exp(self.logestar(school_time, experience, epse, nue)))
-        return np.log(e*wage), wage
+        return np.log(e*wage)
         
+    def wage(self, school_time, experience, nuw,epsw):
+        return np.exp(self.logwage(school_time, experience, nuw, epsw))
+
     def logwage(self, school_time, experience, nuw, epsw):
         """ log wage """
         par = self.par
@@ -360,36 +378,35 @@ class EducationModel(EconModelClass):
         for i in range(par.simN):
             
             # i. initialize states
-            sim.n[i,0] = sim.type_init[i]
             sim.school_time[i,0] = sim.school_time_init[i]
             sim.experience[i,0] = sim.experience_init[i]
             sim.type[i,0] = sim.type_init[i]
 
             for t in range(par.simT):
                 # a. interpolate
-                i_fix = sim.type[i,t]
-                
-                school_time = sim.school_time[i,t]
+                i_fix = int(sim.type[i,t])
+                school_time =int(sim.school_time[i,t])
 
                 sol_d = sol.d[t,i_fix,school_time,:,:,:,:]
 
-                sim.d[i,t] = interp_4d(par.experience_grid,par.epsxi_grid,par.epsw_grid,par.epse_grid,sol_d,sim.experience[i,t],sim.draws_epsxi[i,t],sim.draws_epsw[i,t],sim.draws_epse[i,t])
-                sim.experience[i,t+1] = 
-                sim.school_time[i,t+1]=school_time+ sim.d[i,t]
+                if sim.d[i,t-1] == 1:
+                    sim.d[i,t] = interp_4d(par.experience_grid,par.epsxi_grid,par.epsw_grid,par.epse_grid,sol_d,sim.experience[i,t],sim.draws_epsxi[i,t],sim.draws_epsw[i,t],sim.draws_epse[i,t])
 
+                else:
+                    sim.d[i,t] = 0
+    
+                if sim.d[i,t] == 0:
+                    sim.wage[i,t] = self.wage(school_time,sim.experience[i,t],par.nuw_grid[i_fix],sim.draws_epsw[i,t])
+               
 
+                if t < par.simT-1:
+                    sim.experience[i,t+1] = sim.experience[i,t]+ (1-sim.d[i,t])
+                    sim.school_time[i,t+1]=school_time+ sim.d[i,t]
 
-                i_st = np.where(par.school_time_grid == sim.school_time[i,t])[0][0]
-                i_e = np.where(par.experience_grid == sim.experience[i,t])[0][0]
-                i_epsxi = np.where(par.epsxi_grid == sim.draws_epsxi[i,t])[0][0]
-                i_epsw = np.where(par.epsw_grid == sim.draws_epsw[i,t])[0][0]
-                i_epse = np.where(par.epse_grid == sim.draws_epse[i,t])[0][0]
+                    sim.type[i,t+1] = sim.type[i,t]
 
-                # b. update states
-                sim.n[i,t+1] = sol.d[t,i_fix,i_st,i_e,i_epsxi,i_epsw,i_epse]
-                sim.school_time[i,t+1] = sol.school_time[t,i_fix,i_st,i_e,i_epsxi,i_epsw,i_epse]
-                sim.experience[i,t+1] = sol.experience[t,i_fix,i_st,i_e,i_epsxi,i_epsw,i_epse]
-                sim.wage[i,t] = sol.wage[t,i_fix,i_st,i_e,i_epsxi,i_epsw,i_epse]
+                
+
 
 
 
