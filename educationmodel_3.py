@@ -20,7 +20,7 @@ class EducationModel(EconModelClass):
         # unpack
         par = self.par
 
-        par.T = 11 # 1990-1979
+        par.T = 11 # 1979-1990
         par.simT = par.T 
         # par.zeta = 0 # prob. of being interrupted
         par.beta = 0.97 # discount rate 
@@ -44,6 +44,7 @@ class EducationModel(EconModelClass):
         # wage return to schooling (splines)
         # (lige nu arbejder vi bare med en lineær sammenhæng)
         par.phi1 = 1 # wage return to schooling
+        # 5.5 
 
         # grids 
         par.school_time_min = 6
@@ -56,11 +57,11 @@ class EducationModel(EconModelClass):
 
         # shocks 
         par.Nepsxi = 5
-        par.sigma_xi = 0.01 # std. of shock to utility of going to school 
+        par.sigma_xi = 1 # std. of shock to utility of going to school 
         par.Nepsw = 5
-        par.sigma_w = 0.01 # std. of shock to wage
+        par.sigma_w = 0.2966 # std. of shock to wage
         par.Nepse = 5 
-        par.sigma_e = 0.01 # std. of shock of being employed
+        par.sigma_e = 1.3160 # std. of shock of being employed
 
         # ability
         par.nuxi_1 = -2.9693 
@@ -83,14 +84,14 @@ class EducationModel(EconModelClass):
         par.nue_4 = -1.5840
         par.nue_5 = -3.6242
         par.nue_6 = -3.7365
-
-        par.util_sch_fix_0 = 0
-        par.util_sch_fix_1 = 0.5
-        par.util_sch_fix_2 = 1
-        par.util_sch_fix_3 = 1.5
-        par.util_sch_fix_4 = 2
-        par.util_sch_fix_5 = 2.5
-        par.util_sch_fix_6 = 3.5
+ 
+        par.util_sch_fix_0 = 0 +4
+        par.util_sch_fix_1 = 0.75+4
+        par.util_sch_fix_2 = 1.5+4
+        par.util_sch_fix_3 = 2.25+4
+        par.util_sch_fix_4 = 3.0+4
+        par.util_sch_fix_5 = 3.75+4
+        par.util_sch_fix_6 = 4.5+4
 
     
     def allocate(self):
@@ -144,7 +145,7 @@ class EducationModel(EconModelClass):
         # g. initialization
         par.block_length = par.simN // par.Nfix 
         sim.type_init = np.repeat(np.arange(par.Nfix),par.block_length)
-        sim.school_time_init = np.ones(par.simN)*0
+        sim.school_time_init = np.ones(par.simN)*6
         sim.experience_init = np.zeros(par.simN)
     
 
@@ -211,7 +212,7 @@ class EducationModel(EconModelClass):
         util_school_fix = par.util_sch_fix_grid[i_fix] 
         utility_school = self.utility_school(school_time, util_school_fix, nuxi, epsxi)
 
-        # expected value]
+        # expected value
         EV_next_school = 0 
         school_next = school_time + 1
         experience_next = 0.0
@@ -283,34 +284,39 @@ class EducationModel(EconModelClass):
         sim = self.sim
 
         for i in range(par.simN):
-            
             # i. initialize states
             sim.school_time[i,0] = sim.school_time_init[i]
             sim.experience[i,0] = sim.experience_init[i]
             sim.type[i,0] = sim.type_init[i]
-
+           
             for t in range(par.simT):
                 i_fix = int(sim.type[i,t])
-                school_time =int(sim.school_time[i,t])
+ 
+                school_time_index =int(sim.school_time[i,t]-6)
+                #print i and school time
 
-                sol_d = sol.d[t,i_fix,school_time,:,:,:,:]
+                sol_d = sol.d[t,i_fix,school_time_index,:,:,:,:]
 
                 if sim.d[i,t-1] == 0:
                     sim.d[i,t] = 0
                 
                 else:
-                    sim.d[i,t] = interp_4d(par.experience_grid,par.epsxi_grid,par.epsw_grid,par.epse_grid,sol_d,sim.experience[i,t],sim.draws_epsxi[i,t],sim.draws_epsw[i,t],sim.draws_epse[i,t])
+                    sim.d[i,t] = interp_4d(par.experience_grid,par.epsxi_grid,par.epsw_grid,par.epse_grid,
+                                           sol_d,sim.experience[i,t],sim.draws_epsxi[i,t],sim.draws_epsw[i,t],sim.draws_epse[i,t])
 
 
                 if sim.d[i,t] == 0:
-                    sim.wage[i,t] = self.wage(school_time,sim.experience[i,t],par.nuw_grid[i_fix],sim.draws_epsw[i,t])
+                    sim.wage[i,t] = self.wage(school_time_index,sim.experience[i,t],par.nuw_grid[i_fix],sim.draws_epsw[i,t])
                
 
                 if t < par.simT-1:
                     sim.experience[i,t+1] = sim.experience[i,t]+ (1-sim.d[i,t])
-                    sim.school_time[i,t+1]=school_time+ sim.d[i,t]
+
+                    sim.school_time[i,t+1] = sim.school_time[i,t] + sim.d[i,t]
+                    
 
                     sim.type[i,t+1] = sim.type[i,t]
+                
 
                 
 
