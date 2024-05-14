@@ -29,7 +29,7 @@ class EducationModel(EconModelClass):
 
         # utility of attending school correlation with school time (splines)
         # (lige nu arbejder vi bare med 1 lineær sammenhæng)
-        par.delta7 = -0.00001
+        par.delta7 = -0.00001 #Forstår ikke denne værdi....
 
         # employment return to schooling 
         par.kappa1 = -0.0258 # employment return to schooling 
@@ -48,12 +48,15 @@ class EducationModel(EconModelClass):
 
         # grids 
         par.school_time_min = 6
-        par.school_time_max = 20
+        par.school_time_max = 20 #Er det ikke 22?
         par.Nst = 15 # number of school time grid points
 
         par.experience_min = 0
         par.experience_max = 17
         par.Ne = 18 # number of experience grid points
+
+        #Probability of interrupting school
+        par.zeta = 0.0749 #Fra paper indtil videre
 
         # shocks 
         par.Nepsxi = 5
