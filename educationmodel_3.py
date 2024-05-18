@@ -266,19 +266,19 @@ class EducationModel(EconModelClass):
         par = self.par
         wage = self.wage(school_time, experience, nuw,epsw)
         e = 1/np.exp(np.exp(self.logestar(school_time, experience, epse, nue)))
-        return np.log(e*wage)
+        return np.log(e*wage) + epsw + epse
         
     def wage(self, school_time, experience, nuw,epsw):
         return np.exp(self.logwage(school_time, experience, nuw, epsw))
 
-    def logwage(self, school_time, experience, nuw, epsw):
+    def logwage(self, school_time, experience, nuw):
         """ log wage """
         par = self.par
-        return par.phi1*school_time + par.phi2*experience + par.phi3*experience**2 + nuw + epsw
+        return par.phi1*school_time + par.phi2*experience + par.phi3*experience**2 + nuw
     
-    def logestar(self, school_time, experience, epse, nue):
+    def logestar(self, school_time, experience, nue):
         par = self.par
-        return par.kappa1*school_time + par.kappa2*experience + par.kappa3*experience**2 + nue + epse
+        return par.kappa1*school_time + par.kappa2*experience + par.kappa3*experience**2 + nue
 
     def simulate(self):
         """ simulate model """
