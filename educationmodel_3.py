@@ -85,7 +85,6 @@ class EducationModel(EconModelClass):
         par.nue_5 = -3.6242
         par.nue_6 = -3.7365
  
-        par.util_sch_fix_0 = 0 +4
         par.util_sch_fix_1 = 0.75+4
         par.util_sch_fix_2 = 1.5+4
         par.util_sch_fix_3 = 2.25+4
@@ -117,7 +116,7 @@ class EducationModel(EconModelClass):
         par.nuxi_grid = np.array([par.nuxi_1,par.nuxi_2,par.nuxi_3,par.nuxi_4,par.nuxi_5,par.nuxi_6])
         par.nuw_grid = np.array([par.nuw_1,par.nuw_2,par.nuw_3,par.nuw_4,par.nuw_5,par.nuw_6])
         par.nue_grid = np.array([par.nue_1,par.nue_2,par.nue_3,par.nue_4,par.nue_5,par.nue_6])
-        par.util_sch_fix_grid = np.array([par.util_sch_fix_0,par.util_sch_fix_1,par.util_sch_fix_2,par.util_sch_fix_3,par.util_sch_fix_4,par.util_sch_fix_5,par.util_sch_fix_6])
+        par.util_sch_fix_grid = np.array([par.util_sch_fix_1,par.util_sch_fix_2,par.util_sch_fix_3,par.util_sch_fix_4,par.util_sch_fix_5,par.util_sch_fix_6])
 
         # m. solution arrays 
         shape = (par.T,par.Nfix,par.Nst,par.Ne,par.Nepsxi,par.Nepsw,par.Nepse)
@@ -148,7 +147,6 @@ class EducationModel(EconModelClass):
         sim.school_time_init = np.ones(par.simN)*6
         sim.experience_init = np.zeros(par.simN)
     
-
     
     def solve(self):
 
@@ -174,6 +172,7 @@ class EducationModel(EconModelClass):
                                         if t == par.T-1:
                                             utility_work  = self.utility_work(school_time, experience, nue, epse, nuw,epsw)
                                             utility_school = self.utility_school(school_time, util_school_fix, nuxi, epsxi)
+
                                             sol.V[t,i_fix,i_st,i_e,i_epsxi,i_epsw,i_epse] = np.maximum(utility_school,utility_work)
                                             sol.d[t,i_fix,i_st,i_e,i_epsxi,i_epsw,i_epse] = utility_school > utility_work
                                                 
@@ -221,6 +220,7 @@ class EducationModel(EconModelClass):
             for i_epsw, epsw_next in enumerate(par.epsw_grid):
                 for i_epse, epse_next in enumerate(par.epse_grid):
                     V_next = sol.V[t+1,i_fix,:,:,i_epsxi,i_epsw,i_epse]
+                    # Faktisk overflødigt at interpolere, da vi jo ikke rammer udenfor grid point. 
                     V_next_interp = interp_2d(par.school_time_grid,par.experience_grid,V_next,school_next,experience_next)
                     EV_next_school += par.epsxi_weight[i_epsxi]*par.epsw_weight[i_epsw]*par.epse_weight[i_epse] * V_next_interp
 
@@ -297,23 +297,21 @@ class EducationModel(EconModelClass):
 
                 sol_d = sol.d[t,i_fix,school_time_index,:,:,:,:]
 
+                # Hvis du var på arbejde i sidste periode, så er du det også i denne periode
                 if sim.d[i,t-1] == 0:
                     sim.d[i,t] = 0
                 
                 else:
                     sim.d[i,t] = interp_4d(par.experience_grid,par.epsxi_grid,par.epsw_grid,par.epse_grid,
                                            sol_d,sim.experience[i,t],sim.draws_epsxi[i,t],sim.draws_epsw[i,t],sim.draws_epse[i,t])
-
-
+                    
                 if sim.d[i,t] == 0:
                     sim.wage[i,t] = self.wage(school_time_index,sim.experience[i,t],par.nuw_grid[i_fix],sim.draws_epsw[i,t])
                
-
                 if t < par.simT-1:
                     sim.experience[i,t+1] = sim.experience[i,t]+ (1-sim.d[i,t])
 
                     sim.school_time[i,t+1] = sim.school_time[i,t] + sim.d[i,t]
-                    
 
                     sim.type[i,t+1] = sim.type[i,t]
                 
