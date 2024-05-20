@@ -319,6 +319,37 @@ class EducationModel(EconModelClass):
                     sim.type[i,t+1] = sim.type[i,t]
                 
 
+def read_busdata(self, bustypes = [1,2,3,4]): 
+
+        # Load data into a DataFrame
+        data = pd.read_csv("famb.data", delimiter=",")
+
+        # Extract columns
+        idx = data.iloc[:, 0]            # individual id
+        Mom_educ = data.iloc[:, 1]       # Mother's education
+        Dad_educ = data.iloc[:, 2]       # Dad's education
+        Num_siblings = data.iloc[:, 3]
+        Urban = data.iloc[:, 4]
+        Nuclear = data.iloc[:, 5]
+        Family_income = data.iloc[:, 6]
+        South = data.iloc[:, 7]
+        AFQT_score = data.iloc[:, 8]
+        # Calculate the dummy variable
+        dummy = (data.diff(axis=1).iloc[:, 1:] == 0).astype(int)
+
+        # Collect in a dataframe
+        remove_first_row_index=idx-np.append(0,idx[:-1])
+        data = {'id': idx,'Mother education':Mom_educ, 'Father education': Dad_educ, 'Number of siblings': Num_siblings, 'Urban': Urban, 'Nuclear': Nuclear, 'Family_income': Family_income, 'South': South, 'AFQT_score': AFQT_score, 'Dummy': dummy  'boolean': remove_first_row_index}
+        df = pd.DataFrame(data) 
+
+        # Remove observations with dummy == 0 in all years
+        df = df.drop(df[df.boolean!=0].index)
+
+        # save data
+        dta = df.drop(['id','boolean'],axis=1)
+        
+        return dta
+
                 
 
 
