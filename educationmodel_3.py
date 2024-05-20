@@ -319,7 +319,7 @@ class EducationModel(EconModelClass):
                     sim.type[i,t+1] = sim.type[i,t]
                 
 
-def read_busdata(self, bustypes = [1,2,3,4]): 
+def read_busdata(self): 
 
         # Load data into a DataFrame
         data = pd.read_csv("famb.data", delimiter=",")
