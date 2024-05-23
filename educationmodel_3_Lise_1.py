@@ -188,14 +188,14 @@ class EducationModel(EconModelClass):
                                             utility_school = self.utility_school(school_time, util_sch_fix, nuxi)
 
                                             maxV = np.maximum(utility_school,utility_work) 
-                                            sol.V[t,i_fix,i_st,i_e] = (maxV + np.log(np.exp(utility_school-maxV) + np.exp(utility_work-maxV)))
-                                            sol.d[t,i_fix,i_st,i_e] = 1/(1+np.exp(utility_school-utility_work))
-                                                
-                                            sol.wage[t,i_fix,i_st,i_e] = self.wage(school_time,experience,nuw)
-
-                                            sol.school_time[t,i_fix,i_st,i_e] = school_time
-                                            sol.experience[t,i_fix,i_st,i_e] = experience
+                                            sol.V[t,i_fix,i_nuxi_fix,i_nuw_fix,i_nue_fix,i_util_sch_fix,i_st,i_e] = (maxV + np.log(np.exp(utility_school-maxV) + np.exp(utility_work-maxV)))
+                                            sol.d[t,i_fix,i_nuxi_fix,i_nuw_fix,i_nue_fix,i_util_sch_fix,i_st,i_e] = 1/(1+np.exp(utility_school-utility_work))
                                             
+                                            sol.wage[t,i_fix,i_nuxi_fix,i_nuw_fix,i_nue_fix,i_util_sch_fix,i_st,i_e] = self.wage(school_time,experience,nuw)
+
+                                            sol.school_time[t,i_fix,i_nuxi_fix,i_nuw_fix,i_nue_fix,i_util_sch_fix,i_st,i_e] = school_time
+                                            sol.experience[t,i_fix,i_nuxi_fix,i_nuw_fix,i_nue_fix,i_util_sch_fix,i_st,i_e] = experience
+
                                     
                                         else:
 
@@ -206,13 +206,14 @@ class EducationModel(EconModelClass):
                                             bellman_school = self.bellman_school(t,school_time,i_fix,util_sch_fix, nuxi)
 
                                             maxV = np.maximum(bellman_school,bellman_work)
-                                            sol.V[t,i_fix,i_st,i_e] = (maxV + np.log(np.exp(bellman_school-maxV) + np.exp(bellman_work-maxV)))
-                                            sol.d[t,i_fix,i_st,i_e] = 1/(1+np.exp(bellman_school-bellman_work))
+                                            sol.V[t,i_fix,i_nuxi_fix,i_nuw_fix,i_nue_fix,i_util_sch_fix,i_st,i_e] = (maxV + np.log(np.exp(bellman_school-maxV) + np.exp(bellman_work-maxV)))
+                                            sol.d[t,i_fix,i_nuxi_fix,i_nuw_fix,i_nue_fix,i_util_sch_fix,i_st,i_e] = 1/(1+np.exp(bellman_school-bellman_work))
 
-                                            sol.wage[t,i_fix,i_st,i_e] = self.wage(school_time,experience,nuw)
+                                            sol.wage[t,i_fix,i_nuxi_fix,i_nuw_fix,i_nue_fix,i_util_sch_fix,i_st,i_e] = self.wage(school_time,experience,nuw)
 
-                                            sol.school_time[t,i_fix,i_st,i_e] = school_time
-                                            sol.experience[t,i_fix,i_st,i_e] = experience
+                                            sol.school_time[t,i_fix,i_nuxi_fix,i_nuw_fix,i_nue_fix,i_util_sch_fix,i_st,i_e] = school_time
+                                            sol.experience[t,i_fix,i_nuxi_fix,i_nuw_fix,i_nue_fix,i_util_sch_fix,i_st,i_e] = experience
+
                                             
 
     def bellman_school(self,t, school_time, util_sch_fix, nuxi):
