@@ -1,6 +1,8 @@
 import numpy as np
 from scipy.optimize import minimize
 
+import pandas as pd 
+
 from EconModel import EconModelClass, jit
 
 from consav.grids import nonlinspace
@@ -67,30 +69,30 @@ class EducationModel(EconModelClass):
         # par.sigma_e = 1.3160 # std. of shock of being employed
 
         # ability
-        par.nuxi_1 = -2.9693 
-        par.nuxi_2 = -2.7838
-        par.nuxi_3 = -3.2766
-        par.nuxi_4 = -3.3891
-        par.nuxi_5 = -2.3878
-        par.nuxi_6 = -2.7010
+        par.nuxi_tilde_1 = -2.9693 
+        par.nuxi_tilde_2 = -2.7838
+        par.nuxi_tilde_3 = -3.2766
+        par.nuxi_tilde_4 = -3.3891
+        par.nuxi_tilde_5 = -2.3878
+        par.nuxi_tilde_6 = -2.7010
 
-        par.nuw_1 = 1.5374 
-        par.nuw_2 = 1.8672
-        par.nuw_3 = 1.1951
-        par.nuw_4 = 1.5055
-        par.nuw_5 = 2.1162
-        par.nuw_6 = 1.8016
+        par.nuw_tilde_1 = 1.5374 
+        par.nuw_tilde_2 = 1.8672
+        par.nuw_tilde_3 = 1.1951
+        par.nuw_tilde_4 = 1.5055
+        par.nuw_tilde_5 = 2.1162
+        par.nuw_tilde_6 = 1.8016
 
-        par.nue_1 = -3.4537
-        par.nue_2 = -2.4784
-        par.nue_3 = -3.3351
-        par.nue_4 = -1.5840
-        par.nue_5 = -3.6242
-        par.nue_6 = -3.7365
+        par.nue_tilde_1 = -3.4537
+        par.nue_tilde_2 = -2.4784
+        par.nue_tilde_3 = -3.3351
+        par.nue_tilde_4 = -1.5840
+        par.nue_tilde_5 = -3.6242
+        par.nue_tilde_6 = -3.7365
 
-        par.nuxi_fix_min = -4
-        par.nuxi_fix_max = 4
-        par.Nnuxi_fix = 9
+        #par.nuxi_fix_min = -4
+        #par.nuxi_fix_max = 4
+        #par.Nnuxi_fix = 9
 
         par.nuw_fix_min = -4
         par.nuw_fix_max = 4
@@ -104,6 +106,13 @@ class EducationModel(EconModelClass):
         par.util_sch_fix_max = 10
         par.Nutil_sch_fix = 11
 
+        par.p0 = 0.1
+        par.p1 = 0.1
+        par.p2 = 0.1
+        par.p3 = 0.1
+        par.p4 = 0.1
+        par.p5 = 0.1
+        par.p6 = (1-par.p0-par.p1-par.p2-par.p3-par.p4-par.p5)
 
 
 
@@ -126,13 +135,13 @@ class EducationModel(EconModelClass):
         par.nuw_tilde_grid = np.array([par.nuw_tilde_1,par.nuw_tilde_2,par.nuw_tilde_3,par.nuw_tilde_4,par.nuw_tilde_5,par.nuw_tilde_6])
         par.nue_tilde_grid = np.array([par.nue_tilde_1,par.nue_tilde_2,par.nue_tilde_3,par.nue_tilde_4,par.nue_tilde_5,par.nue_tilde_6])
 
-        par.nuxi_fix_grid = np.linspace(par.nuxi_fix_min,par.nuxi_fix_max,par.Nnuxi_fix)
+        #par.nuxi_fix_grid = np.linspace(par.nuxi_fix_min,par.nuxi_fix_max,par.Nnuxi_fix)
         par.nuw_fix_grid = np.linspace(par.nuw_fix_min,par.nuw_fix_max,par.Nnuw_fix)
         par.nue_fix_grid = np.linspace(par.nue_fix_min,par.nue_fix_max,par.Nnue_fix)
         par.util_sch_fix_grid = np.linspace(par.util_sch_fix_min,par.util_sch_fix_max,par.Nutil_sch_fix)
 
         # m. solution arrays 
-        shape = (par.T,par.Nfix,par.Nnuxi_fix,par.Nnuw_fix,par.Nnue_fix,par.Nutil_sch_fix,par.Nst,par.Ne)
+        shape = (par.T,par.Nfix,par.Nnuw_fix,par.Nnue_fix,par.Nutil_sch_fix,par.Nst,par.Ne)
 
         sol.d = np.nan + np.zeros(shape)
         sol.V = np.nan + np.zeros(shape)
@@ -172,51 +181,50 @@ class EducationModel(EconModelClass):
         # c. loop backwards (over all periods)
         for t in reversed(range(par.T)):
             for i_fix in range(par.Nfix):
-                for i_nuxi_fix, nuxi_fix in enumerate(par.nuxi_fix_grid):
-                    for i_nuw_fix, nuw_fix in enumerate(par.nuw_fix_grid):
-                        for i_nue_fix, nue_fix in enumerate(par.nue_fix_grid):
-                            for i_util_sch_fix, util_sch_fix in enumerate(par.util_sch_fix_grid):
-                                for i_st, school_time in enumerate(par.school_time_grid):
-                                    for i_e, experience in enumerate(par.experience_grid):
-                                        nuxi = par.nuxi_grid[i_fix] + nuxi_fix
-                                        nue = par.nue_grid[i_fix] + nue_fix
-                                        nuw = par.nuw_grid[i_fix] + nuw_fix
+                for i_nuw_fix, nuw_fix in enumerate(par.nuw_fix_grid):
+                    for i_nue_fix, nue_fix in enumerate(par.nue_fix_grid):
+                        for i_util_sch_fix, util_sch_fix in enumerate(par.util_sch_fix_grid):
+                            for i_st, school_time in enumerate(par.school_time_grid):
+                                for i_e, experience in enumerate(par.experience_grid):
+                                    nuxi = par.nuxi_tilde_grid[i_fix] 
+                                    nue = par.nue_tilde_grid[i_fix] + nue_fix
+                                    nuw = par.nuw_tilde_grid[i_fix] + nuw_fix
 
-                                        # solve last period 
-                                        if t == par.T-1:
-                                            utility_work  = self.utility_work(school_time, experience, nue, nuw)
-                                            utility_school = self.utility_school(school_time, util_sch_fix, nuxi)
+                                    # solve last period 
+                                    if t == par.T-1:
+                                        utility_work  = self.utility_work(school_time, experience, nue, nuw)
+                                        utility_school = self.utility_school(school_time, util_sch_fix, nuxi)
 
-                                            maxV = np.maximum(utility_school,utility_work) 
-                                            sol.V[t,i_fix,i_nuxi_fix,i_nuw_fix,i_nue_fix,i_util_sch_fix,i_st,i_e] = (maxV + np.log(np.exp(utility_school-maxV) + np.exp(utility_work-maxV)))
-                                            sol.d[t,i_fix,i_nuxi_fix,i_nuw_fix,i_nue_fix,i_util_sch_fix,i_st,i_e] = 1/(1+np.exp(utility_school-utility_work))
-                                            
-                                            sol.wage[t,i_fix,i_nuxi_fix,i_nuw_fix,i_nue_fix,i_util_sch_fix,i_st,i_e] = self.wage(school_time,experience,nuw)
+                                        maxV = np.maximum(utility_school,utility_work) 
+                                        sol.V[t,i_fix,i_nuw_fix,i_nue_fix,i_util_sch_fix,i_st,i_e] = (maxV + np.log(np.exp(utility_school-maxV) + np.exp(utility_work-maxV)))
+                                        sol.d[t,i_fix,i_nuw_fix,i_nue_fix,i_util_sch_fix,i_st,i_e] = 1/(1+np.exp(utility_school-utility_work))
+                                        
+                                        sol.wage[t,i_fix,i_nuw_fix,i_nue_fix,i_util_sch_fix,i_st,i_e] = self.wage(school_time,experience,nuw)
 
-                                            sol.school_time[t,i_fix,i_nuxi_fix,i_nuw_fix,i_nue_fix,i_util_sch_fix,i_st,i_e] = school_time
-                                            sol.experience[t,i_fix,i_nuxi_fix,i_nuw_fix,i_nue_fix,i_util_sch_fix,i_st,i_e] = experience
+                                        sol.school_time[t,i_fix,i_nuw_fix,i_nue_fix,i_util_sch_fix,i_st,i_e] = school_time
+                                        sol.experience[t,i_fix,i_nuw_fix,i_nue_fix,i_util_sch_fix,i_st,i_e] = experience
 
-                                    
-                                        else:
+                                
+                                    else:
 
-                                            # b. bellman work
-                                            bellman_work  = self.bellman_work(t, school_time, experience, i_fix, nue, nuw)
+                                        # b. bellman work
+                                        bellman_work  = self.bellman_work(t, school_time, experience, i_fix, nue, nuw,i_nuw_fix,i_nue_fix,i_util_sch_fix)
 
-                                            # a. bellman school
-                                            bellman_school = self.bellman_school(t,school_time,i_fix,util_sch_fix, nuxi)
+                                        # a. bellman school
+                                        bellman_school = self.bellman_school(t,school_time,i_fix,util_sch_fix, nuxi,i_nuw_fix,i_nue_fix,i_util_sch_fix)
 
-                                            maxV = np.maximum(bellman_school,bellman_work)
-                                            sol.V[t,i_fix,i_nuxi_fix,i_nuw_fix,i_nue_fix,i_util_sch_fix,i_st,i_e] = (maxV + np.log(np.exp(bellman_school-maxV) + np.exp(bellman_work-maxV)))
-                                            sol.d[t,i_fix,i_nuxi_fix,i_nuw_fix,i_nue_fix,i_util_sch_fix,i_st,i_e] = 1/(1+np.exp(bellman_school-bellman_work))
+                                        maxV = np.maximum(bellman_school,bellman_work)
+                                        sol.V[t,i_fix,i_nuw_fix,i_nue_fix,i_util_sch_fix,i_st,i_e] = (maxV + np.log(np.exp(bellman_school-maxV) + np.exp(bellman_work-maxV)))
+                                        sol.d[t,i_fix,i_nuw_fix,i_nue_fix,i_util_sch_fix,i_st,i_e] = 1/(1+np.exp(bellman_school-bellman_work))
 
-                                            sol.wage[t,i_fix,i_nuxi_fix,i_nuw_fix,i_nue_fix,i_util_sch_fix,i_st,i_e] = self.wage(school_time,experience,nuw)
+                                        sol.wage[t,i_fix,i_nuw_fix,i_nue_fix,i_util_sch_fix,i_st,i_e] = self.wage(school_time,experience,nuw)
 
-                                            sol.school_time[t,i_fix,i_nuxi_fix,i_nuw_fix,i_nue_fix,i_util_sch_fix,i_st,i_e] = school_time
-                                            sol.experience[t,i_fix,i_nuxi_fix,i_nuw_fix,i_nue_fix,i_util_sch_fix,i_st,i_e] = experience
+                                        sol.school_time[t,i_fix,i_nuw_fix,i_nue_fix,i_util_sch_fix,i_st,i_e] = school_time
+                                        sol.experience[t,i_fix,i_nuw_fix,i_nue_fix,i_util_sch_fix,i_st,i_e] = experience
 
-                                            
+                                        
 
-    def bellman_school(self,t, school_time, util_sch_fix, nuxi):
+    def bellman_school(self,t, school_time,i_fix,util_sch_fix, nuxi,i_nuw_fix,i_nue_fix,i_util_sch_fix):
         """ bellman equation for school """
         par = self.par
         sol = self.sol
@@ -229,13 +237,13 @@ class EducationModel(EconModelClass):
         school_next = school_time + 1
 
         # Faktisk overflødigt at interpolere, da vi jo ikke rammer udenfor grid point. (Men så ikke alligevel, da der jo ikke er nok points)
-        V_next = sol.V[t+1,i_fix,:,:]
+        V_next = sol.V[t+1,i_fix,i_nuw_fix,i_nue_fix,i_util_sch_fix,:,:]
         EV_next_school = interp_2d(par.school_time_grid,par.experience_grid,V_next,school_next,0)
 
-        bellman_school = utility_school + par.beta* EV_next_school
+        bellman_school = utility_school + par.beta * EV_next_school
         return bellman_school
 
-    def bellman_work(self,t, school_time, experience, i_fix, nue, nuw):
+    def bellman_work(self,t, school_time, experience, i_fix, nue, nuw,i_nuw_fix,i_nue_fix,i_util_sch_fix):
         """ bellman equation for work """
         par = self.par
         sol = self.sol
@@ -245,7 +253,8 @@ class EducationModel(EconModelClass):
 
         experience_next = experience + 1 
 
-        V_next = sol.V[t+1,i_fix,:,:]
+        V_next = sol.V[t+1,i_fix,i_nuw_fix,i_nue_fix,i_util_sch_fix,:,:]
+        # Kan vi bare gøre pga. extreme value. 
         EV_next_work = interp_2d(par.school_time_grid,par.experience_grid,V_next,school_time,experience_next)
 
         bellman_work = utility_work + par.beta* EV_next_work
@@ -278,6 +287,8 @@ class EducationModel(EconModelClass):
     def logestar(self, school_time, experience, nue):
         par = self.par
         return par.kappa1*school_time + par.kappa2*experience + par.kappa3*experience**2 + nue
+    
+
 
     def simulate(self):
         """ simulate model """
