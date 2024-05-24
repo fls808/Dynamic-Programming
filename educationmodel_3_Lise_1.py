@@ -28,6 +28,33 @@ class EducationModel(EconModelClass):
         par.beta = 0.97 # discount rate 
         par.Nfix = 6 # number of types
         par.simN = par.Nfix*50 # number of households. Should be something dividable with number of types
+        par.N = 1710 # number of observations
+
+        par.delta0 = 0.0205 # Father's education
+        par.delta1 = -0.0080 # Mother's education 
+        par.delta2 = 0.0017 # Household income 
+        par.delta3 = -0.0156 # No. siblings 
+        par.delta4 = 0.0387 # Nuclear family 
+        par.delta5 = -0.0618 # Rural 
+        par.delta6 = -0.0412 # South
+
+        # wages ability's correlation with background
+        par.gamma0_w = 0.0106 # Father's education 
+        par.gamma1_w = -0.0144 # Mother's education 
+        par.gamma2_w = 0.0012 # Household income 
+        par.gamma3_w = -0.0084 # No. siblings 
+        par.gamma4_w = 0.0225 # Nuclear family 
+        par.gamma5_w = -0.0591 # Rural 
+        par.gamma6_w = -0.0363 # South
+
+        # employment ability's correlation with background
+        par.gamma0_e = -0.0221 # Father's education 
+        par.gamma1_e = -0.0031 # Mother's education 
+        par.gamma2_e = -0.0006 # Household income 
+        par.gamma3_e = 0.0123 # No. siblings 
+        par.gamma4_e = -0.0100 # Nuclear family 
+        par.gamma5_e = 0.0559 # Rural 
+        par.gamma6_e = -0.0986 # South
 
         # utility of attending school correlation with school time (splines)
         # (lige nu arbejder vi bare med 1 lineær sammenhæng)
@@ -94,25 +121,24 @@ class EducationModel(EconModelClass):
         #par.nuxi_fix_max = 4
         #par.Nnuxi_fix = 9
 
-        par.nuw_fix_min = -4
-        par.nuw_fix_max = 4
-        par.Nnuw_fix = 9
+        par.nuw_fix_min = 0.13
+        par.nuw_fix_max = 181
+        par.Nnuw_fix = 15
 
-        par.nue_fix_min = -4
-        par.nue_fix_max = 4
-        par.Nnue_fix = 9
+        par.nue_fix_min = -0.91
+        par.nue_fix_max = -0.20
+        par.Nnue_fix = 3
 
-        par.util_sch_fix_min = 0
-        par.util_sch_fix_max = 10
-        par.Nutil_sch_fix = 11
+        par.util_sch_fix_min = 0.04
+        par.util_sch_fix_max = 256
+        par.Nutil_sch_fix = 15
 
-        par.p0 = 0.1
-        par.p1 = 0.1
-        par.p2 = 0.1
-        par.p3 = 0.1
-        par.p4 = 0.1
-        par.p5 = 0.1
-        par.p6 = (1-par.p0-par.p1-par.p2-par.p3-par.p4-par.p5)
+        par.q1 = 0.6286
+        par.q2 = -0.3823
+        par.q3 = -0.4227
+        par.q4 = -0.4513
+        par.q5 = -0.0776
+        par.q6 = 0
 
 
 
@@ -169,6 +195,13 @@ class EducationModel(EconModelClass):
         sim.type_init = np.repeat(np.arange(par.Nfix),par.block_length)
         sim.school_time_init = np.ones(par.simN)*6
         sim.experience_init = np.zeros(par.simN)
+
+        par.p1 = np.exp(par.q1)/(np.exp(par.q1)+np.exp(par.q2)+np.exp(par.q3)+np.exp(par.q4)+np.exp(par.q5)+np.exp(par.q6))
+        par.p2 = np.exp(par.q2)/(np.exp(par.q1)+np.exp(par.q2)+np.exp(par.q3)+np.exp(par.q4)+np.exp(par.q5)+np.exp(par.q6))
+        par.p3 = np.exp(par.q3)/(np.exp(par.q1)+np.exp(par.q2)+np.exp(par.q3)+np.exp(par.q4)+np.exp(par.q5)+np.exp(par.q6))
+        par.p4 = np.exp(par.q4)/(np.exp(par.q1)+np.exp(par.q2)+np.exp(par.q3)+np.exp(par.q4)+np.exp(par.q5)+np.exp(par.q6))
+        par.p5 = np.exp(par.q5)/(np.exp(par.q1)+np.exp(par.q2)+np.exp(par.q3)+np.exp(par.q4)+np.exp(par.q5)+np.exp(par.q6))
+        par.p6 = np.exp(par.q6)/(np.exp(par.q1)+np.exp(par.q2)+np.exp(par.q3)+np.exp(par.q4)+np.exp(par.q5)+np.exp(par.q6))
     
     
     def solve(self):
@@ -277,7 +310,10 @@ class EducationModel(EconModelClass):
         return np.log(e*wage)
         
     def wage(self, school_time, experience, nuw):
-        return np.exp(self.logwage(school_time, experience, nuw))
+        logwage_value = self.logwage(school_time, experience, nuw)
+        max_exp_value = 709
+        clamped_logwage_value = np.clip(logwage_value, -max_exp_value, max_exp_value)
+        return np.exp(clamped_logwage_value)
 
     def logwage(self, school_time, experience, nuw):
         """ log wage """
