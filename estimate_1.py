@@ -102,8 +102,9 @@ class estimate_class():
                         experience_i
                     )
                     clamped_lik_pr_x = np.clip(lik_pr_x, 0+epsilon, 1-epsilon)
-                    
-                    choice_prob_x = clamped_lik_pr_x * d[i + par.N * t] + (1 - clamped_lik_pr_x) * (1 - d[i + par.N * t])
+
+                    # Incorporate the probability of being interupted and not choosing d=1 even though it is the optimal choice
+                    choice_prob_x = (clamped_lik_pr_x - par.zeta) * d[i + par.N * t] + (1 - clamped_lik_pr_x + par.zeta) * (1 - d[i + par.N * t])
                     if x in probabilities:
                         log_likelihood += probabilities[x] * np.log(choice_prob_x)
         

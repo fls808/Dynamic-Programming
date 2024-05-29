@@ -24,7 +24,7 @@ class EducationModel(EconModelClass):
 
         par.T = 11 # 1979-1990
         par.simT = par.T 
-        # par.zeta = 0 # prob. of being interrupted
+        par.zeta = 0 # prob. of being interrupted
         par.beta = 0.97 # discount rate 
         par.Nfix = 6 # number of types
         par.simN = par.Nfix*50 # number of households. Should be something dividable with number of types
@@ -272,8 +272,9 @@ class EducationModel(EconModelClass):
         # Faktisk overflødigt at interpolere, da vi jo ikke rammer udenfor grid point. (Men så ikke alligevel, da der jo ikke er nok points)
         V_next = sol.V[t+1,i_fix,i_nuw_fix,i_nue_fix,i_util_sch_fix,:,:]
         EV_next_school = interp_2d(par.school_time_grid,par.experience_grid,V_next,school_next,0)
+        EV_next_interupt = interp_2d(par.school_time_grid,par.experience_grid,V_next,school_time,0)
 
-        bellman_school = utility_school + par.beta * EV_next_school
+        bellman_school = utility_school + par.beta * (par.zeta * EV_next_interupt + (1-par.zeta) * EV_next_school)
         return bellman_school
 
     def bellman_work(self,t, school_time, experience, i_fix, nue, nuw,i_nuw_fix,i_nue_fix,i_util_sch_fix):
