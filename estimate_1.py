@@ -16,10 +16,7 @@ from consav.quadrature import normal_gauss_hermite
 class estimate_class():
 
 
-    def estimate(self,model,family_data,decision_data,bounds=[(None,None)],theta0=[0]):
-        
-
-        pnames = ['beta']
+    def estimate(self,model,family_data,decision_data,pnames,theta0,bounds):
 
         res = optimize.minimize(self.obj,theta0,bounds=bounds,args=(model, family_data,decision_data, pnames), method='trust-constr',options={'disp':True})
         self.updatepar(model.par,pnames,res.x)
@@ -32,7 +29,9 @@ class estimate_class():
 
         self.updatepar(model.par,pnames,theta)
 
-        print('beta', model.par.beta)
+        for parname in pnames:
+            print(parname, getattr(model.par,parname))
+
 
         model.allocate()
         model.solve()
@@ -58,16 +57,13 @@ class estimate_class():
 
         d = decision_data.dummy
         
+        # family related part of utility and ability. 
         util_school  = par.delta0*Dad_educ + par.delta1*Mom_educ + par.delta2*Family_income + par.delta3*Num_siblings + par.delta4*Nuclear + par.delta5*Urban + par.delta6*South
         ability_wage = par.gamma0_w*Dad_educ + par.gamma1_w*Mom_educ + par.gamma2_w*Family_income + par.gamma3_w*Num_siblings + par.gamma4_w*Nuclear + par.gamma5_w*Urban + par.gamma6_w*South
         ability_employment = par.gamma0_e*Dad_educ + par.gamma1_e*Mom_educ + par.gamma2_e*Family_income + par.gamma3_e*Num_siblings + par.gamma4_e*Nuclear + par.gamma5_e*Urban + par.gamma6_e*South
-        # ability_wage
-        # ability_employment
 
         school_time_index =school_time-6
 
-        # probability of staying in school given the state
-        # AND THE ORTHOGONAL TYPE
         log_likelihood = 0
 
         epsilon = 1e-10
@@ -106,6 +102,7 @@ class estimate_class():
                         experience_i
                     )
                     clamped_lik_pr_x = np.clip(lik_pr_x, 0+epsilon, 1-epsilon)
+                    
                     choice_prob_x = clamped_lik_pr_x * d[i + par.N * t] + (1 - clamped_lik_pr_x) * (1 - d[i + par.N * t])
                     if x in probabilities:
                         log_likelihood += probabilities[x] * np.log(choice_prob_x)
