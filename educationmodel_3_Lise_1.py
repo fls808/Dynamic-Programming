@@ -69,7 +69,7 @@ class EducationModel(EconModelClass):
 
         # grids 
         par.school_time_min = 6
-        par.school_time_max = 20 #Er det ikke 22?
+        par.school_time_max = 20 
         par.Nst = 15 # number of school time grid points
 
         par.experience_min = 0
@@ -145,6 +145,7 @@ class EducationModel(EconModelClass):
         sim.d = np.nan + np.zeros(shape)
         sim.school_time = np.nan + np.zeros(shape)
         sim.experience = np.nan + np.zeros(shape)
+        sim.wage = np.nan + np.zeros(shape)
         sim.util_school_fix = np.nan + np.zeros(par.simN)
         sim.abil_job_fix = np.nan + np.zeros(par.simN)
 
@@ -159,8 +160,8 @@ class EducationModel(EconModelClass):
 
         sim.school_time_init = np.random.randint(6,16, size=par.simN)
         sim.experience_init = np.zeros(par.simN)
-        sim.dad_educ = np.random.randint(0, 21, size=par.simN)
-        sim.mom_educ = np.random.randint(0, 21, size=par.simN)
+        sim.Dad_educ = np.random.randint(0, 21, size=par.simN)
+        sim.Mom_educ = np.random.randint(0, 21, size=par.simN)
         sim.Num_siblings = np.random.randint(0, 16, size=par.simN)
         sim.Urban = np.random.randint(0,2,size=par.simN)
         sim.Nuclear = np.random.randint(0,2,size=par.simN)
@@ -200,7 +201,7 @@ class EducationModel(EconModelClass):
                                     sol.V[t,i_fix,i_nuw_fix,i_util_sch_fix,i_st,i_e] = (maxV + np.log(np.exp(utility_school-maxV) + np.exp(utility_work-maxV)))
                                     sol.d[t,i_fix,i_nuw_fix,i_util_sch_fix,i_st,i_e] = 1/(1+np.exp(utility_school-utility_work))
                                     
-                                    sol.wage[t,i_fix,i_nuw_fix,i_util_sch_fix,i_st,i_e] = self.wage(school_time,experience,nuw)
+                                    sol.wage[t,i_fix,i_nuw_fix,i_util_sch_fix,i_st,i_e] = self.wage(school_time,experience)
 
                                     sol.school_time[t,i_fix,i_nuw_fix,i_util_sch_fix,i_st,i_e] = school_time
                                     sol.experience[t,i_fix,i_nuw_fix,i_util_sch_fix,i_st,i_e] = experience
@@ -218,7 +219,7 @@ class EducationModel(EconModelClass):
                                     sol.V[t,i_fix,i_nuw_fix,i_util_sch_fix,i_st,i_e] = (maxV + np.log(np.exp(bellman_school-maxV) + np.exp(bellman_work-maxV)))
                                     sol.d[t,i_fix,i_nuw_fix,i_util_sch_fix,i_st,i_e] = 1/(1+np.exp(bellman_school-bellman_work))
 
-                                    sol.wage[t,i_fix,i_nuw_fix,i_util_sch_fix,i_st,i_e] = self.wage(school_time,experience,nuw)
+                                    sol.wage[t,i_fix,i_nuw_fix,i_util_sch_fix,i_st,i_e] = self.wage(school_time,experience)
 
                                     sol.school_time[t,i_fix,i_nuw_fix,i_util_sch_fix,i_st,i_e] = school_time
                                     sol.experience[t,i_fix,i_nuw_fix,i_util_sch_fix,i_st,i_e] = experience
@@ -236,15 +237,17 @@ class EducationModel(EconModelClass):
         # expected value
         EV_next_school = 0 
         school_next = school_time + 1
-        school_next_index = school_next-6
+        school_next_index = int(min(school_next-6,14))
+        school_time_index = int(school_time-6)
+        experience_index = int(experience)
 
-        EV_next_school = sol.V[t+1,i_fix,i_nuw_fix,i_util_sch_fix,school_next_index,experience]
-        EV_next_interupt = sol.V[t+1,i_fix,i_nuw_fix,i_util_sch_fix,school_time,experience]
+        EV_next_school = sol.V[t+1,i_fix,i_nuw_fix,i_util_sch_fix,school_next_index,experience_index]
+        EV_next_interupt = sol.V[t+1,i_fix,i_nuw_fix,i_util_sch_fix,school_time_index,experience_index]
 
         bellman_school = utility_school + par.beta * (par.zeta * EV_next_interupt + (1-par.zeta) * EV_next_school)
         return bellman_school
 
-    def bellman_work(self,t, school_time, experience, i_fix, nue, nuw,i_nuw_fix,i_util_sch_fix):
+    def bellman_work(self,t, school_time, experience, i_fix, nuw,i_nuw_fix,i_util_sch_fix):
         """ bellman equation for work """
         par = self.par
         sol = self.sol
@@ -252,8 +255,8 @@ class EducationModel(EconModelClass):
         # flow utility
         utility_work = self.utility_work(school_time, experience, nuw)
 
-        experience_next = experience + 1 
-        school_next_index = school_time-6
+        experience_next = int(min(experience + 1,17))
+        school_next_index = int(school_time-6)
 
         EV_next_work = sol.V[t+1,i_fix,i_nuw_fix,i_util_sch_fix,school_next_index,experience_next]
   
@@ -276,11 +279,7 @@ class EducationModel(EconModelClass):
         e = 1/np.exp(np.exp(self.logestar(school_time, experience)))
         return np.log(e*wage) + nuw
         
-    def wage(self, school_time, experience):
-        logwage_value = self.logwage(school_time, experience)
-        max_exp_value = 709
-        clamped_logwage_value = np.clip(logwage_value, -max_exp_value, max_exp_value)
-        return np.exp(clamped_logwage_value)
+
 
     def logwage(self, school_time, experience):
         """ log wage """
@@ -299,6 +298,8 @@ class EducationModel(EconModelClass):
         sol = self.sol
         sim = self.sim
 
+        print("hejsa")
+
         for i in range(par.simN):
 
             # i. initialize states
@@ -310,12 +311,11 @@ class EducationModel(EconModelClass):
             
            
             for t in range(par.simT):
-                i_fix = int(sim.type_init[i])
+                i_fix = int(sim.type[i])
 
                 school_time_index =int(sim.school_time[i,t]-6)
-                #print i and school time
             
-                sol_d = sol.d[t,i_fix,:,:,school_time_index,sim.experience[i,t]]
+                sol_d = sol.d[t,i_fix,:,:,int(min(school_time_index,14)),int(sim.experience[i,t])]
 
                 if sim.interup_d[i,t]>= par.zeta or sim.d[i,t-1]==0:
                     sim.d[i,t] = sim.u_d[i,t] < interp_2d(par.nuw_fix_grid,par.util_sch_fix_grid,sol_d,sim.abil_job_fix[i],sim.util_school_fix[i])
@@ -323,7 +323,8 @@ class EducationModel(EconModelClass):
                    sim.d[i,t]= 1  
 
                 if sim.d[i,t] == 0:
-                    sim.wage[i,t] = self.wage(school_time_index,sim.experience[i,t])
+                    sim.wage[i,t] = self.wage(school_time_index,int(sim.experience[i,t]))
+
                
                 if t < par.simT-1 and sim.d[i,t]==1 and sim.interup_d[i,t]< par.zeta:
                     sim.experience[i,t+1] = sim.experience[i,t] 

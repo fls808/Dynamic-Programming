@@ -10,7 +10,6 @@ import pandas as pd
 from consav.grids import nonlinspace
 from consav.linear_interp import interp_1d
 from consav.linear_interp import interp_2d
-from consav.linear_interp import interp_3d
 from consav.linear_interp import interp_4d
 from consav.quadrature import normal_gauss_hermite
 
@@ -60,8 +59,8 @@ class estimate_class():
         
         # family related part of utility and ability. 
         util_school  = par.delta0*Dad_educ + par.delta1*Mom_educ + par.delta2*Family_income + par.delta3*Num_siblings + par.delta4*Nuclear + par.delta5*Urban + par.delta6*South
-        ability_job = par.gamma0_w*Dad_educ + par.gamma1_w*Mom_educ + par.gamma2_w*Family_income + par.gamma3_w*Num_siblings + par.gamma4_w*Nuclear + par.gamma5_w*Urban + par.gamma6_w*South
-        
+        ability_wage = par.gamma0_w*Dad_educ + par.gamma1_w*Mom_educ + par.gamma2_w*Family_income + par.gamma3_w*Num_siblings + par.gamma4_w*Nuclear + par.gamma5_w*Urban + par.gamma6_w*South
+        ability_employment = par.gamma0_e*Dad_educ + par.gamma1_e*Mom_educ + par.gamma2_e*Family_income + par.gamma3_e*Num_siblings + par.gamma4_e*Nuclear + par.gamma5_e*Urban + par.gamma6_e*South
 
         school_time_index =school_time-6
 
@@ -69,7 +68,7 @@ class estimate_class():
 
         epsilon = 1e-10
 
-        probabilities = {0: par.p1, 1: par.p2, 2: par.p3, 3: par.p4}
+        probabilities = {0: par.p1, 1: par.p2, 2: par.p3, 3: par.p4, 4: par.p5, 5: par.p6}
         # Iterate over N and T
         for i in range(par.N):
             for t in range(par.T):
@@ -89,21 +88,23 @@ class estimate_class():
                         print('experience_i is still nan')
                     experience_i = 0
 
-                for x in range(1, 4):
-                    sol_x = sol.d[t, x, :, :, school_time_index[i + par.N * t],:]
-                    lik_pr_x = interp_3d(
+                for x in range(1, 6):
+                    sol_x = sol.d[t, x, :, :, :, school_time_index[i + par.N * t], :]
+                    lik_pr_x = interp_4d(
                         par.nuw_fix_grid,
+                        par.nue_fix_grid,
                         par.util_sch_fix_grid,
                         par.experience_grid,
                         sol_x,
-                        ability_job[i],
+                        ability_wage[i],
+                        ability_employment[i],
                         util_school[i],
                         experience_i
                     )
                     clamped_lik_pr_x = np.clip(lik_pr_x, 0+epsilon, 1-epsilon)
 
                     # Incorporate the probability of being interupted and not choosing d=1 even though it is the optimal choice
-                    choice_prob_x = (clamped_lik_pr_x + par.zeta) * d[i + par.N * t] + (1 - clamped_lik_pr_x - par.zeta) * (1 - d[i + par.N * t])
+                    choice_prob_x = (clamped_lik_pr_x - par.zeta) * d[i + par.N * t] + (1 - clamped_lik_pr_x + par.zeta) * (1 - d[i + par.N * t])
                     if x in probabilities:
                         log_likelihood += probabilities[x] * np.log(choice_prob_x)
         
