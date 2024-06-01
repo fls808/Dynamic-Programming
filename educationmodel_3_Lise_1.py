@@ -278,7 +278,9 @@ class EducationModel(EconModelClass):
         wage = self.wage(school_time, experience)
         e = 1/np.exp(np.exp(self.logestar(school_time, experience)))
         return np.log(e*wage) + nuw
-        
+    
+    def wage(self, school_time, experience):
+        return np.exp(self.logwage(school_time, experience))
 
 
     def logwage(self, school_time, experience):
