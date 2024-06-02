@@ -242,7 +242,6 @@ class EducationModel(EconModelClass):
 
                                     sol.school_time[t,i_fix,i_nuw_fix,i_util_sch_fix,i_st,i_e] = school_time
                                     sol.experience[t,i_fix,i_nuw_fix,i_util_sch_fix,i_st,i_e] = experience
-
                                         
 
     def bellman_school(self,t, school_time,experience,i_fix,util_sch_fix, nuxi,i_nuw_fix,i_util_sch_fix):

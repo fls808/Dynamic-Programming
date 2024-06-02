@@ -108,11 +108,11 @@ class estimate_class():
                     clamped_school_optimal_x = np.clip(school_optimal_x, 0+epsilon, 1-epsilon)
 
                     # Incorporate the probability of being interupted etc. 
-                    choice_prob_x = par.zeta*interrupt[i+par.N*t] + (1-clamped_school_optimal_x)*work[i+par.N*t] + clamped_school_optimal_x*school[i+par.N*t]*(1-par.zeta)
+                    choice_prob_x = par.zeta*interrupt[i+par.N*t] + (1-par.zeta)*(1-clamped_school_optimal_x)*work[i+par.N*t] + (1-par.zeta)*clamped_school_optimal_x*school[i+par.N*t]
 
                     if choice_prob_x == 0: 
                         print('idx = ', idx[i], 't =', t)
-                        print('choice_prob_x = 0', 'school t-1=' , school[i + par.N * (t-1)], 'interrupt t-1 =', interrupt[i + par.N * (t-1)], 'work t-1 =', work[i + par.N * (t-1)])
+                        print('choice_prob_x = 0', 'school t-1=' , school_time_going_in[i + par.N * t], 'interrupt t-1 =', interrupt[i + par.N * (t-1)], 'work t-1 =', work[i + par.N * (t-1)])
                         print('school t =', school[i + par.N * t], 'interrupt t =', interrupt[i + par.N * t], 'work t =', work[i + par.N * t])
                     
                     if x in probabilities:
@@ -133,7 +133,7 @@ class estimate_class():
 
             # Load data into a DataFrame
             family = pd.read_csv("famb.data", delim_whitespace=True, header=None)
-            merged_data = pd.read_csv('merged_data.data', delim_whitespace=True)
+            merged_data = pd.read_csv('merged_data.data', sep='\t')
 
             # Extract columns
             idx = family.iloc[:, 0]            # individual id
