@@ -142,17 +142,34 @@ class EducationModel(EconModelClass):
 
         # e. simulation arrays
         shape = (par.simN,par.simT)
-        sim.d = np.nan + np.zeros(shape)
+        sim.school = np.nan + np.zeros(shape)
+        sim.work = np.nan + np.zeros(shape)
+        sim.interrupt = np.nan + np.zeros(shape)
         sim.school_time = np.nan + np.zeros(shape)
         sim.experience = np.nan + np.zeros(shape)
         sim.wage = np.nan + np.zeros(shape)
         sim.util_school_fix = np.nan + np.zeros(par.simN)
         sim.abil_job_fix = np.nan + np.zeros(par.simN)
 
+        values = [50,200,50,200]  # Four different values for utility school for simulation 2
+        values_1 = [30,30,120,120] #Four different values for ability work for simulation 2
+
+        num_occurrences = par.simN // len(values)
+
+        sim.util_school_fix_2 = np.tile(values, num_occurrences)
+        sim.abil_job_fix_2 = np.tile(values_1, num_occurrences)
+
+        # In case par_simN is not perfectly divisible by 4, handle the remainder
+        remainder = par.simN % len(values)
+        if remainder != 0:
+            sim.util_school_fix_2 = np.concatenate([sim.util_school_fix_2, np.array(values[:remainder])])
+            sim.abil_job_fix_2 = np.concatenate([sim.abil_job_fix_2, np.array(values_1[:remainder])])
+
+
         # f. draws used to simulate shocks 
         np.random.seed(9210)
         sim.u_d = np.random.rand(par.simN,par.simT) # choice of school
-        sim.interup_d = np.random.rand(par.simN,par.simT)
+        sim.interrupt_d = np.random.rand(par.simN,par.simT)
 
         # g. initialization for simulation
         par.block_length = par.simN // par.Nfix 
@@ -199,7 +216,7 @@ class EducationModel(EconModelClass):
 
                                     maxV = np.maximum(utility_school,utility_work) 
                                     sol.V[t,i_fix,i_nuw_fix,i_util_sch_fix,i_st,i_e] = (maxV + np.log(np.exp(utility_school-maxV) + np.exp(utility_work-maxV)))
-                                    sol.d[t,i_fix,i_nuw_fix,i_util_sch_fix,i_st,i_e] = 1/(1+np.exp(utility_school-utility_work))
+                                    sol.d[t,i_fix,i_nuw_fix,i_util_sch_fix,i_st,i_e] = 1/(1+np.exp(utility_work-utility_school))
                                     
                                     sol.wage[t,i_fix,i_nuw_fix,i_util_sch_fix,i_st,i_e] = self.wage(school_time,experience)
 
@@ -217,7 +234,7 @@ class EducationModel(EconModelClass):
 
                                     maxV = np.maximum(bellman_school,bellman_work)
                                     sol.V[t,i_fix,i_nuw_fix,i_util_sch_fix,i_st,i_e] = (maxV + np.log(np.exp(bellman_school-maxV) + np.exp(bellman_work-maxV)))
-                                    sol.d[t,i_fix,i_nuw_fix,i_util_sch_fix,i_st,i_e] = 1/(1+np.exp(bellman_school-bellman_work))
+                                    sol.d[t,i_fix,i_nuw_fix,i_util_sch_fix,i_st,i_e] = 1/(1+np.exp(bellman_work-bellman_school))
 
                                     sol.wage[t,i_fix,i_nuw_fix,i_util_sch_fix,i_st,i_e] = self.wage(school_time,experience)
 
@@ -319,7 +336,7 @@ class EducationModel(EconModelClass):
             
                 sol_d = sol.d[t,i_fix,:,:,int(min(school_time_index,14)),int(sim.experience[i,t])]
 
-                if sim.interup_d[i,t]>= par.zeta or sim.d[i,t-1]==0:
+                if sim.interrupt_d[i,t]>= par.zeta or sim.d[i,t-1]==0:
                     sim.d[i,t] = sim.u_d[i,t] < interp_2d(par.nuw_fix_grid,par.util_sch_fix_grid,sol_d,sim.abil_job_fix[i],sim.util_school_fix[i])
                 else: 
                    sim.d[i,t]= 1  
@@ -328,11 +345,11 @@ class EducationModel(EconModelClass):
                     sim.wage[i,t] = self.wage(school_time_index,int(sim.experience[i,t]))
 
                
-                if t < par.simT-1 and sim.d[i,t]==1 and sim.interup_d[i,t]< par.zeta:
+                if t < par.simT-1 and sim.d[i,t]==1 and sim.interrupt_d[i,t]< par.zeta:
                     sim.experience[i,t+1] = sim.experience[i,t] 
                     sim.school_time[i,t+1] = sim.school_time[i,t]
                 
-                elif t < par.simT-1 and sim.d[i,t]==1 and sim.interup_d[i,t]>=par.zeta:
+                elif t < par.simT-1 and sim.d[i,t]==1 and sim.interrupt_d[i,t]>=par.zeta:
                     sim.experience[i,t+1] = sim.experience[i,t] 
                     sim.school_time[i,t+1] = sim.school_time[i,t] +1
                 
@@ -341,7 +358,53 @@ class EducationModel(EconModelClass):
                     sim.school_time[i,t+1] = sim.school_time[i,t]
 
 
-                
+    def simulate_2(self):
+        """ simulate model """
+        par = self.par
+        sol = self.sol
+        sim = self.sim
+
+        print("hejsa")
+
+        for i in range(par.simN):
+
+            # i. initialize states
+            sim.school_time[i,0] = sim.school_time_init[i]
+            sim.experience[i,0] = sim.experience_init[i]
+
+            sim.util_school_fix[i] = sim.util_school_fix_2[i]
+            sim.abil_job_fix[i] = sim.abil_job_fix_2[i]
+            
+        
+            for t in range(par.simT):
+                i_fix = int(sim.type[i])
+
+                school_time_index =int(sim.school_time[i,t]-6)
+            
+                sol_d = sol.d[t,i_fix,:,:,int(min(school_time_index,14)),int(sim.experience[i,t])]
+
+                if sim.interrupt_d[i,t] < par.zeta:
+                    sim.interrupt = 1
+
+                else:
+                    sim.school[i,t] = sim.u_d[i,t]< interp_2d(par.nuw_fix_grid,par.util_sch_fix_grid,sol_d,sim.abil_job_fix[i],sim.util_school_fix[i])
+                    sim.work[i,t] = 1-sim.school[i,t]
+                    
+                if sim.work[i,t] == 1:
+                    sim.wage[i,t] = self.wage(school_time_index,int(sim.experience[i,t]))
+
+                if t < par.simT-1:
+                    if sim.interrupt == 1:
+                        sim.experience[i,t+1] = sim.experience[i,t]
+                        sim.school_time[i,t+1] = sim.school_time[i,t]
+                    
+                    elif sim.work[i,t]==1:
+                        sim.experience[i,t+1] = sim.experience[i,t] +1
+                        sim.school_time[i,t+1] = sim.school_time[i,t]
+                    
+                    elif sim.school[i,t]==1: 
+                        sim.experience[i,t+1] = sim.experience[i,t]
+                        sim.school_time[i,t+1] = sim.school_time[i,t]
 
                 
 
