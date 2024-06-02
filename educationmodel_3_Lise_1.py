@@ -23,12 +23,12 @@ class EducationModel(EconModelClass):
         # unpack
         par = self.par
 
-        par.T = 11 # 1979-1990
+        par.T = 10 # 1980-1989
         par.simT = par.T 
         par.zeta = 0 # prob. of being interrupted
         par.beta = 0.97 # discount rate 
         par.Nfix = 4 # number of types
-        par.simN = par.Nfix*50 # number of households. Should be something dividable with number of types
+        par.simN = par.Nfix*100 # number of households. Should be something dividable with number of types
         par.N = 1710 # number of observations
 
         par.delta0 = 0.0205 # Father's education
@@ -54,6 +54,7 @@ class EducationModel(EconModelClass):
 
         # employment return to schooling 
         par.kappa1 = -0.0258 # employment return to schooling 
+
         par.kappa2 = -0.0146 # employment return to work experience 
         par.kappa3 = 0.0001 # employment return to work experience squared
 
@@ -64,7 +65,8 @@ class EducationModel(EconModelClass):
 
         # wage return to schooling (splines)
         # (lige nu arbejder vi bare med en lineær sammenhæng)
-        par.phi1 = 1 # wage return to schooling
+        par.phi1 = 0.7 # wage return to schooling
+        par.phi4 = -0.004 #wage return to schooling squared
         # 5.5 
 
         # grids 
@@ -303,7 +305,7 @@ class EducationModel(EconModelClass):
     def logwage(self, school_time, experience):
         """ log wage """
         par = self.par
-        return par.phi1*school_time + par.phi2*experience + par.phi3*experience**2
+        return par.phi1*school_time + par.phi4*school_time**2 + par.phi2*experience + par.phi3*experience**2
     
     def logestar(self, school_time, experience):
         par = self.par
@@ -384,17 +386,21 @@ class EducationModel(EconModelClass):
                 sol_d = sol.d[t,i_fix,:,:,int(min(school_time_index,14)),int(sim.experience[i,t])]
 
                 if sim.interrupt_d[i,t] < par.zeta:
-                    sim.interrupt = 1
+                    sim.interrupt[i,t] = 1
+                    sim.school[i,t] = 0 
+                    sim.work[i,t] = 0 
+                    
 
                 else:
                     sim.school[i,t] = sim.u_d[i,t]< interp_2d(par.nuw_fix_grid,par.util_sch_fix_grid,sol_d,sim.abil_job_fix[i],sim.util_school_fix[i])
                     sim.work[i,t] = 1-sim.school[i,t]
+                    sim.interrupt[i,t] = 0
                     
                 if sim.work[i,t] == 1:
                     sim.wage[i,t] = self.wage(school_time_index,int(sim.experience[i,t]))
 
                 if t < par.simT-1:
-                    if sim.interrupt == 1:
+                    if sim.interrupt[i,t] == 1:
                         sim.experience[i,t+1] = sim.experience[i,t]
                         sim.school_time[i,t+1] = sim.school_time[i,t]
                     
@@ -404,7 +410,7 @@ class EducationModel(EconModelClass):
                     
                     elif sim.school[i,t]==1: 
                         sim.experience[i,t+1] = sim.experience[i,t]
-                        sim.school_time[i,t+1] = sim.school_time[i,t]
+                        sim.school_time[i,t+1] = sim.school_time[i,t] +1
 
                 
 
