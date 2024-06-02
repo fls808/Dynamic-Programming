@@ -5,6 +5,7 @@ from EconModel import EconModelClass, jit
 
 import scipy.optimize as optimize
 
+
 import pandas as pd
 
 from consav.grids import nonlinspace
@@ -15,7 +16,6 @@ from consav.linear_interp import interp_4d
 from consav.quadrature import normal_gauss_hermite
 
 class estimate_class():
-
 
     def estimate(self,model,family_data,decision_data,pnames,theta0,bounds):
 
