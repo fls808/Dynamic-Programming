@@ -41,6 +41,8 @@ class estimate_class():
         sol = model.sol
         par = model.par
 
+        idx = family_data.idx
+
 
         # give ability
         Dad_educ = family_data.Dad_educ
@@ -52,8 +54,8 @@ class estimate_class():
         South = family_data.South
 
 
-        experience = decision_data.exp 
-        school_time = decision_data.edu
+        experience_going_in = decision_data.exp_going_in 
+        school_time_going_in = decision_data.edu_going_in
 
 
         school = decision_data.dummy_school 
@@ -66,7 +68,7 @@ class estimate_class():
         ability_job = par.gamma0_w*Dad_educ + par.gamma1_w*Mom_educ + par.gamma2_w*Family_income + par.gamma3_w*Num_siblings + par.gamma4_w*Nuclear + par.gamma5_w*Urban + par.gamma6_w*South
         
 
-        school_time_index =school_time-6
+        school_time_index =school_time_going_in-6
 
         log_likelihood = 0
 
@@ -77,7 +79,7 @@ class estimate_class():
         for i in range(par.N):
             for t in range(par.T):
                 
-                experience_i = experience[i + par.N * t]
+                experience_i = experience_going_in[i + par.N * t]
                 
                 if np.isnan(experience_i):
                     for r in range(t):
@@ -85,7 +87,7 @@ class estimate_class():
                         if np.isnan(experience_i):
                             if output_exp==True:
                                 print('experience_i is nan, going ', r+1,' periods back to find a non-nan')
-                            experience_i = experience[i + par.N *(t-r-1)]
+                            experience_i = experience_going_in[i + par.N *(t-r-1)]
                 
                 if np.isnan(experience_i):
                     if output_exp==True:
@@ -106,20 +108,10 @@ class estimate_class():
                     clamped_school_optimal_x = np.clip(school_optimal_x, 0+epsilon, 1-epsilon)
 
                     # Incorporate the probability of being interupted etc. 
+                    choice_prob_x = par.zeta*interrupt[i+par.N*t] + (1-clamped_school_optimal_x)*work[i+par.N*t] + clamped_school_optimal_x*school[i+par.N*t]*(1-par.zeta)
 
-                    if t == 0: 
-                        choice_prob_x = clamped_school_optimal_x*(1-par.zeta)*school[i+par.N*t] + par.zeta*interrupt[i+par.N*t] + (1-clamped_school_optimal_x)*(1-par.zeta)*work[i+par.N*t]
-                    else:
-                        choice_prob_x = par.zeta*interrupt[i+par.N*t] + (1-clamped_school_optimal_x)*(1-par.zeta)*work[i+par.N*t] + clamped_school_optimal_x*school[i+par.N*t]*(1-par.zeta)
-
-
-                        if work[i + par.N * (t-1)] == 1:
-                            choice_prob_x = clamped_school_optimal_x*school[i+par.N*t] + (1-clamped_school_optimal_x)*(work[i+par.N*t])
-
-                        elif school[i + par.N * (t-1)] == 1 or interrupt[i + par.N * (t-1)] == 1:
-                            choice_prob_x = clamped_school_optimal_x*(1-par.zeta)*school[i+par.N*t] + par.zeta*interrupt[i+par.N*t] + (1-clamped_school_optimal_x)*(1-par.zeta)*work[i+par.N*t]
-                    
                     if choice_prob_x == 0: 
+                        print('idx = ', idx[i], 't =', t)
                         print('choice_prob_x = 0', 'school t-1=' , school[i + par.N * (t-1)], 'interrupt t-1 =', interrupt[i + par.N * (t-1)], 'work t-1 =', work[i + par.N * (t-1)])
                         print('school t =', school[i + par.N * t], 'interrupt t =', interrupt[i + par.N * t], 'work t =', work[i + par.N * t])
                     
@@ -142,7 +134,6 @@ class estimate_class():
             # Load data into a DataFrame
             family = pd.read_csv("famb.data", delim_whitespace=True, header=None)
             merged_data = pd.read_csv('merged_data.data', delim_whitespace=True)
-            
 
             # Extract columns
             idx = family.iloc[:, 0]            # individual id
@@ -159,15 +150,14 @@ class estimate_class():
             idx_merged = merged_data.iloc[:,0]
             year = merged_data.iloc[:,1] 
             dummy_school = merged_data.iloc[:,2]
-            edu = merged_data.iloc[:,3]
+            edu_going_in = merged_data.iloc[:,3]
             dummy_interrup = merged_data.iloc[:,4]
             dummy_work = merged_data.iloc[:,5]
             # Change work to 0, when both work=1 and school=1 
             dummy_work = np.where((dummy_work == 1) & (dummy_school == 1), 0, dummy_work)
 
             
-
-            exp = merged_data.iloc[:,6]
+            exp_going_in = merged_data.iloc[:,6]
             wage = merged_data.iloc[:,7]
 
             # Collect in a dataframe
@@ -175,7 +165,7 @@ class estimate_class():
             family = {'idx': idx,'Mom_educ':Mom_educ, 'Dad_educ': Dad_educ, 'Num_siblings': Num_siblings, 'Urban': Urban, 'Nuclear': Nuclear, 'Family_income': Family_income, 'South': South, 'AFQT_score': AFQT_score}
             dta_family = pd.DataFrame(family) 
 
-            merged = {'id': idx_merged, 'year': year, 'dummy_school': dummy_school, 'edu': edu, 'dummy_interrup': dummy_interrup, 'dummy_work': dummy_work, 'exp': exp, 'wage': wage}
+            merged = {'id': idx_merged, 'year': year, 'dummy_school': dummy_school, 'edu_going_in': edu_going_in, 'dummy_interrup': dummy_interrup, 'dummy_work': dummy_work, 'exp_going_in': exp_going_in, 'wage': wage}
             dta_merged = pd.DataFrame(merged)
             # Remove observations with dummy == 0 in all years
             # df = df.drop(df[df.boolean!=0].index)
