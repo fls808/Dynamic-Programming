@@ -6,12 +6,28 @@ import scipy.optimize as optimize
 import pandas as pd
 
 from consav.linear_interp import interp_3d
+from numpy import linalg as la
  
 class estimate_class():
 
     def estimate(self,model,family_data,decision_data,pnames,theta0):
-        res = optimize.minimize(self.obj,theta0,args=(model, family_data,decision_data, pnames),options={'disp':True})
-        self.updatepar(model.par,pnames,res.x)
+        result = optimize.minimize(self.obj,theta0,args=(model, family_data,decision_data, pnames),options={'disp':True},tol=1e-5)
+        self.updatepar(model.par,pnames,result.x)
+
+        cov, se = self.variance(model,pnames,family_data,decision_data,result.x)
+
+        res = {
+        'theta': result.x,
+        'se':       se,
+        't': result.x / se,
+        'cov':      cov,
+        'success':  result.success, # bool, whether convergence was succesful 
+        'nit':      result.nit, # no. algorithm iterations 
+        'nfev':     result.nfev, # no. function evaluations 
+        'fun':      result.fun # function value at termination 
+        }   
+        return res
+
 
     def obj(self,theta, model, family_data,decision_data,pnames):
         return -self.ll(theta, model, family_data,decision_data,pnames)
@@ -33,7 +49,7 @@ class estimate_class():
         idx = family_data.idx
 
 
-        # Give ability
+        # Give family-related part of utility and ability. 
         Dad_educ = family_data.Dad_educ
         Mom_educ = family_data.Mom_educ
         Family_income = family_data.Family_income
@@ -41,21 +57,19 @@ class estimate_class():
         Nuclear = family_data.Nuclear
         Urban = family_data.Urban
         South = family_data.South
+     
+        util_school  = par.delta0*Dad_educ + par.delta1*Mom_educ + par.delta2*Family_income + par.delta3*Num_siblings + par.delta4*Nuclear + par.delta5*Urban + par.delta6*South
+        ability_job = par.gamma0_w*Dad_educ + par.gamma1_w*Mom_educ + par.gamma2_w*Family_income + par.gamma3_w*Num_siblings + par.gamma4_w*Nuclear + par.gamma5_w*Urban + par.gamma6_w*South
 
-
+        # Other state variables
         experience_going_in = decision_data.exp_going_in 
         school_time_going_in = decision_data.edu_going_in
 
-
+        # "Decision" (including interruption)
         school = decision_data.dummy_school 
         interrupt = decision_data.dummy_interrup
         work = decision_data.dummy_work
 
-        
-        # Family related part of utility and ability. 
-        util_school  = par.delta0*Dad_educ + par.delta1*Mom_educ + par.delta2*Family_income + par.delta3*Num_siblings + par.delta4*Nuclear + par.delta5*Urban + par.delta6*South
-        ability_job = par.gamma0_w*Dad_educ + par.gamma1_w*Mom_educ + par.gamma2_w*Family_income + par.gamma3_w*Num_siblings + par.gamma4_w*Nuclear + par.gamma5_w*Urban + par.gamma6_w*South
-        
 
         school_time_index =school_time_going_in-6
 
@@ -68,8 +82,10 @@ class estimate_class():
         for i in range(par.N):
             for t in range(par.T):
                 
+                # experience going in is a panel data set, where the observations are sorted by time and individual.
                 experience_i = experience_going_in[i + par.N * t]
                 
+                # If experience_i is nan, we go back in time to find a non-nan value. If we do not find a non-nan value, we set experience_i to 0.
                 if np.isnan(experience_i):
                     for r in range(t):
                         #If experience_i equal to nan 
@@ -83,6 +99,7 @@ class estimate_class():
                         print('experience_i is still nan')
                     experience_i = 0
 
+                # Finding the solutions for the different types of individuals
                 for x in range(1, 4):
                     sol_x = sol.d[t, x, :, :, school_time_index[i + par.N * t],:]
                     school_optimal_x = interp_3d(
@@ -94,16 +111,13 @@ class estimate_class():
                         util_school[i],
                         experience_i
                     )
+                    # Securing that the school_optimal_x is within the bounds of 0 and 1
                     clamped_school_optimal_x = np.clip(school_optimal_x, 0+epsilon, 1-epsilon)
 
-                    # Incorporate the probability of being interupted etc. 
+                    # Choice probability, incorporating the probability of being interupted etc. 
                     choice_prob_x = par.zeta*interrupt[i+par.N*t] + (1-par.zeta)*(1-clamped_school_optimal_x)*work[i+par.N*t] + (1-par.zeta)*clamped_school_optimal_x*school[i+par.N*t]
-
-                    if choice_prob_x == 0: 
-                        print('idx = ', idx[i], 't =', t)
-                        print('choice_prob_x = 0', 'school t-1=' , school_time_going_in[i + par.N * t], 'interrupt t-1 =', interrupt[i + par.N * (t-1)], 'work t-1 =', work[i + par.N * (t-1)])
-                        print('school t =', school[i + par.N * t], 'interrupt t =', interrupt[i + par.N * t], 'work t =', work[i + par.N * t])
                     
+                    # Making the "weighted average" of the likelihood taking into account the probability of being a specific type
                     if x in probabilities:
                         log_likelihood += probabilities[x] * np.log(choice_prob_x)
         
@@ -137,16 +151,17 @@ class estimate_class():
             # Extract columns from merged data
             idx_merged = merged_data.iloc[:,0]
             year = merged_data.iloc[:,1] 
-            dummy_school = merged_data.iloc[:,2]
-            edu_going_in = merged_data.iloc[:,3]
-            dummy_interrup = merged_data.iloc[:,4]
-            dummy_work = merged_data.iloc[:,5]
+            edu_going_in = merged_data.iloc[:,3] # Education going into the year
+            exp_going_in = merged_data.iloc[:,6] 
+            wage = merged_data.iloc[:,7]
+
+            # Dummies
+            dummy_school = merged_data.iloc[:,2] # Dummy for going to school 
+            dummy_interrup = merged_data.iloc[:,4] # Dummy for being interrupted
+            dummy_work = merged_data.iloc[:,5] # Dummy for working
 
             # Change work to 0, when both work=1 and school=1 
             dummy_work = np.where((dummy_work == 1) & (dummy_school == 1), 0, dummy_work)
-
-            exp_going_in = merged_data.iloc[:,6]
-            wage = merged_data.iloc[:,7]
 
             # Collect in a dataframe
             family = {'idx': idx,'Mom_educ':Mom_educ, 'Dad_educ': Dad_educ, 'Num_siblings': Num_siblings, 'Urban': Urban, 'Nuclear': Nuclear, 'Family_income': Family_income, 'South': South}
@@ -157,17 +172,16 @@ class estimate_class():
             
             return dta_family, dta_merged
     
-    def variance(self,model,pnames,family_data,decision_data, result):
+    def variance(self,model,pnames,family_data,decision_data, thetahat):
         """Calculates the variance for the likelihood function."""
   
         # Take number of rows in the decision data as the number of observations
         N = decision_data.shape[0]
-        thetahat = result.x
-        P = thetahat.size
+        #P = thetahat.size
 
         # numerical Hessian
-        f_q = lambda theta : self.ll(theta,model,family_data,decision_data,pnames) 
-        H = self.hessian(f_q, thetahat)/N
+        f_q = lambda theta: self.obj(theta,model,family_data,decision_data,pnames) # setting the negative of the log-likelihood as the function to differentiate
+        H = self.hessian(thetahat,f_q)/N
         H_inv = la.inv(H)  
         
         cov = 1/N * H_inv
@@ -177,23 +191,21 @@ class estimate_class():
 
         return cov, se
 
-    
-    def hessian( fhandle , x0 , h=1e-5 ) -> np.ndarray: 
-        '''hessian(): computes the (K,K) matrix of 2nd partial derivatives
-            using the aggregation "sum" (i.e. consider dividing by N)
-        Returns: 
-            hess: (K,K) matrix of second partial derivatives 
-        '''
 
+
+    def hessian(self,basis, fhandle, h=1e-5): 
         # Computes the hessian of the input function at the point x0 
-        assert x0.ndim == 1 , f'x0 must be 1-dimensional'
+        print('basis', basis)
+
+        print('fhandle', fhandle)
+        assert basis.ndim == 1 , f'x0 must be 1-dimensional'
         assert callable(fhandle), 'fhandle must be a callable function handle'
 
         # aggregate rows with a raw sum (as opposed to the mean)
         agg_fun = np.sum
 
         # Initialization
-        K = x0.size
+        K = basis.size
         f2 = np.zeros((K,K)) # double step
         f1 = np.zeros((K,))  # single step
         h_rel = h # optimal step size is smaller than for gradient
@@ -201,18 +213,18 @@ class estimate_class():
         # Step size 
         dh = np.empty((K,))
         for k in range(K): 
-            if x0[k] == 0.0: # use absolute step when relative is impossible 
+            if basis[k] == 0.0: # use absolute step when relative is impossible 
                 dh[k] = h_rel 
             else: # use a relative step 
-                dh[k] = h_rel*x0[k]
+                dh[k] = h_rel*basis[k]
 
         # Initial point 
-        f0 = agg_fun(fhandle(x0)) 
+        f0 = agg_fun(fhandle(basis)) 
 
         # Evaluate single forward steps
         for k in range(K): 
-            x1 = np.copy(x0) 
-            x1[k] = x0[k] + dh[k] 
+            x1 = np.copy(basis) 
+            x1[k] = basis[k] + dh[k] 
             f1[k] = agg_fun(fhandle(x1))
 
         # Double forward steps
@@ -220,12 +232,12 @@ class estimate_class():
             for j in range(k+1): # only loop to the diagonal!! This is imposing symmetry to save computations
                 
                 # 1. find the new point (after double-stepping) 
-                x2 = np.copy(x0) 
+                x2 = np.copy(basis) 
                 if k==j: # diagonal steps: only k'th entry is changed, taking two steps 
-                    x2[k] = x0[k] + dh[k] + dh[k] 
+                    x2[k] = basis[k] + dh[k] + dh[k] 
                 else:  # we have taken both a step in the k'th and one in the j'th directions 
-                    x2[k] = x0[k] + dh[k] 
-                    x2[j] = x0[j] + dh[j]  
+                    x2[k] = basis[k] + dh[k] 
+                    x2[j] = basis[j] + dh[j]  
 
                 # 2. compute function value 
                 f2[k,j] = agg_fun(fhandle(x2))
