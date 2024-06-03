@@ -9,9 +9,9 @@ from consav.linear_interp import interp_3d
 from numpy import linalg as la
  
 class estimate_class():
-
+ 
     def estimate(self,model,family_data,decision_data,pnames,theta0):
-        result = optimize.minimize(self.obj,theta0,args=(model, family_data,decision_data, pnames),options={'disp':True},tol=1e-5)
+        result = optimize.minimize(self.obj, theta0, args=(model, family_data, decision_data, pnames), method='L-BFGS-B', options={'disp': True}, tol= 1e-4)
         self.updatepar(model.par,pnames,result.x)
 
         cov, se = self.variance(model,pnames,family_data,decision_data,result.x)
@@ -30,7 +30,7 @@ class estimate_class():
 
 
     def obj(self,theta, model, family_data,decision_data,pnames):
-        return -self.ll(theta, model, family_data,decision_data,pnames)
+        return -np.mean(self.ll(theta, model, family_data,decision_data,pnames))
 
     def ll(self,theta, model, family_data,decision_data,pnames,output_exp = False):
         """ log likelihood """
@@ -121,7 +121,6 @@ class estimate_class():
                     if x in probabilities:
                         log_likelihood += probabilities[x] * np.log(choice_prob_x)
         
-        print('log_likelihood =', log_likelihood)
         return log_likelihood
         
 
