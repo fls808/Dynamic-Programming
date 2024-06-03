@@ -18,10 +18,9 @@ class EducationModel(EconModelClass):
         # Basis parameters
         par.T = 10 # 1980-1989
         par.simT = par.T 
-        par.zeta = 0 # Probability of being interrupted
         par.beta = 0.97 # Discount rate 
         par.Nfix = 4 # Number of types
-        par.simN = par.Nfix*100 # Number of households
+        par.simN = par.Nfix*500 # Number of households
         par.N = 1710 # Number of observations
 
         # Utility of attending school correlation with background
@@ -54,7 +53,7 @@ class EducationModel(EconModelClass):
         par.kappa4 = 0.0001 # employment return to work experience squared
 
         # Wage return to schooling (splines)
-        par.phi1 = 0.7 # wage return to schooling
+        par.phi1 = 0.15 # wage return to schooling
         par.phi2 = -0.004 #wage return to schooling squared
 
         # Wage 
