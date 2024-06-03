@@ -17,9 +17,9 @@ from consav.quadrature import normal_gauss_hermite
 
 class estimate_class():
 
-    def estimate(self,model,family_data,decision_data,pnames,theta0,bounds):
+    def estimate(self,model,family_data,decision_data,pnames,theta0):
 
-        res = optimize.minimize(self.obj,theta0,bounds=bounds,args=(model, family_data,decision_data, pnames), method='trust-constr',options={'disp':True})
+        res = optimize.minimize(self.obj,theta0,args=(model, family_data,decision_data, pnames),options={'disp':True})
         self.updatepar(model.par,pnames,res.x)
 
     # Vi vil gerne have indkomporeret løn i denne model. 
