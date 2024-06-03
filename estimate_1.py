@@ -14,7 +14,8 @@ from consav.linear_interp import interp_2d
 from consav.linear_interp import interp_3d
 from consav.linear_interp import interp_4d
 from consav.quadrature import normal_gauss_hermite
-#h
+
+#s 
 class estimate_class():
 
     def estimate(self,model,family_data,decision_data,pnames,theta0):

@@ -308,7 +308,7 @@ class EducationModel(EconModelClass):
     
     def logestar(self, school_time, experience):
         par = self.par
-        return par.kappa1*school_time + par.kappa2*experience + par.kappa3*experience**2
+        return par.kappa1*school_time + par.kappa4*school_time**2+ par.kappa2*experience + par.kappa3*experience**2
     
 
 
