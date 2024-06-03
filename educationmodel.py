@@ -43,14 +43,14 @@ class EducationModel(EconModelClass):
 
         # Utility of attending school correlation with school time 
         par.delta7 = -0.00001 # School time  
-        par.delta8 = -0.001 # School time squared
+        par.delta8 = -0.002 # School time squared
 
         # Employment return to schooling 
         par.kappa1 = -0.0258 # employment return to schooling 
-        par.kappa2 = -0.001 # employment return to schooling squared
+        par.kappa2 = -0.002 # employment return to schooling squared
 
         par.kappa3 = -0.0146 # employment return to work experience 
-        par.kappa4 = -0.001 # employment return to work experience squared
+        par.kappa4 = -0.002 # employment return to work experience squared
 
         # Wage return to schooling 
         par.phi1 = 0.15 # wage return to schooling
