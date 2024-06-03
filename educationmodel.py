@@ -41,7 +41,7 @@ class EducationModel(EconModelClass):
         par.gamma5_w = -0.0591 # Rural 
         par.gamma6_w = -0.0363 # South
 
-        # Utility of attending school correlation with school time (splines)
+        # Utility of attending school correlation with school time 
         par.delta7 = -0.00001 # School time  
         par.delta8 = 0.0001 # School time squared
 
@@ -52,7 +52,7 @@ class EducationModel(EconModelClass):
         par.kappa3 = -0.0146 # employment return to work experience 
         par.kappa4 = 0.0001 # employment return to work experience squared
 
-        # Wage return to schooling (splines)
+        # Wage return to schooling 
         par.phi1 = 0.15 # wage return to schooling
         par.phi2 = -0.004 #wage return to schooling squared
 
