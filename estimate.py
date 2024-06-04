@@ -11,7 +11,7 @@ from numpy import linalg as la
 class estimate_class():
  
     def estimate(self,model,family_data,decision_data,pnames,theta0):
-        result = optimize.minimize(self.obj, theta0, args=(model, family_data, decision_data, pnames), method='L-BFGS-B', options={'disp': True}, tol= 1e-4)
+        result = optimize.minimize(-np.mean(self.obj), theta0, args=(model, family_data, decision_data, pnames), method='L-BFGS-B', options={'disp': True}, tol= 1e-4)
         self.updatepar(model.par,pnames,result.x)
 
         cov, se = self.variance(model,pnames,family_data,decision_data,result.x)
@@ -30,7 +30,7 @@ class estimate_class():
 
 
     def obj(self,theta, model, family_data,decision_data,pnames):
-        return -np.mean(self.ll(theta, model, family_data,decision_data,pnames))
+        return -self.ll(theta, model, family_data,decision_data,pnames)
 
     def ll(self,theta, model, family_data,decision_data,pnames,output_exp = False):
         """ log likelihood """
@@ -192,7 +192,7 @@ class estimate_class():
 
 
 
-    def hessian(self,basis, fhandle, h=1e-5): 
+    def hessian(self,basis, fhandle, h=1e-4): 
         # Computes the hessian of the input function at the point x0 
         print('basis', basis)
 
@@ -249,5 +249,7 @@ class estimate_class():
         for k in range(K): 
             for j in range(K): 
                 hess[k,j] = ((f2[k,j] - f1[k]) - (f1[j] - f0)) / (dh[k] * dh[j])
-
+        
+        # Regularization to ensure positive definiteness
+        #hess += 1e-4 * np.eye(K)
         return hess
